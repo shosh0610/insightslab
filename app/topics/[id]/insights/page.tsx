@@ -53,13 +53,13 @@ export default function InsightsPage() {
   }, [topicId]);
 
   const filteredInsights = insights.filter(insight =>
-    insight.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    insight.source_authors.toLowerCase().includes(searchQuery.toLowerCase())
+    insight.text?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    insight.source_authors?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const filteredDataPoints = dataPoints.filter(dp =>
-    dp.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    dp.source_authors.toLowerCase().includes(searchQuery.toLowerCase())
+    dp.text?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    dp.source_authors?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const getConfidenceBadge = (confidence: string) => {
@@ -256,16 +256,18 @@ export default function InsightsPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">Sources:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {insight.source_authors.split(',').map((author, i) => (
-                          <Badge key={i} variant="secondary">
-                            {author.trim()}
-                          </Badge>
-                        ))}
+                    {insight.source_authors && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Sources:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {insight.source_authors.split(',').map((author, i) => (
+                            <Badge key={i} variant="secondary">
+                              {author.trim()}
+                            </Badge>
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    )}
                     {insight.note && (
                       <div className="pt-2 border-t">
                         <p className="text-sm text-muted-foreground">
@@ -302,14 +304,18 @@ export default function InsightsPage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-sm text-muted-foreground mb-1">Sources:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {dp.source_authors.split(',').map((author, i) => (
-                          <Badge key={i} variant="secondary" className="text-xs">
-                            {author.trim()}
-                          </Badge>
-                        ))}
-                      </div>
+                      {dp.source_authors && (
+                        <>
+                          <p className="text-sm text-muted-foreground mb-1">Sources:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {dp.source_authors.split(',').map((author, i) => (
+                              <Badge key={i} variant="secondary" className="text-xs">
+                                {author.trim()}
+                              </Badge>
+                            ))}
+                          </div>
+                        </>
+                      )}
                     </CardContent>
                   </Card>
                 ))}
