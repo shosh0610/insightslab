@@ -90,7 +90,7 @@ export interface ConversationProfile {
  * Start research agent for a topic
  */
 export async function startResearch(topicName: string, videoCount: number = 10): Promise<ResearchResult> {
-  const response = await fetch(`${API_URL}/api/research/start`, {
+  const response = await fetch(`${API_URL}/api/research/start/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -115,7 +115,7 @@ export async function createTopic(
   topicName: string,
   sources: Array<{ url: string; title: string; author: string; source_type: string }>
 ): Promise<Topic> {
-  const response = await fetch(`${API_URL}/api/topics`, {
+  const response = await fetch(`${API_URL}/api/topics/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -137,7 +137,7 @@ export async function createTopic(
  * Trigger synthesis for a topic
  */
 export async function triggerSynthesis(topicId: number): Promise<{ status: string; message: string }> {
-  const response = await fetch(`${API_URL}/api/synthesis/synthesize/${topicId}`, {
+  const response = await fetch(`${API_URL}/api/synthesis/synthesize/${topicId}/`, {
     method: 'POST',
   });
 
@@ -152,7 +152,7 @@ export async function triggerSynthesis(topicId: number): Promise<{ status: strin
  * Get synthesis status
  */
 export async function getSynthesisStatus(topicId: number): Promise<SynthesisStatus> {
-  const response = await fetch(`${API_URL}/api/synthesis/status/${topicId}`);
+  const response = await fetch(`${API_URL}/api/synthesis/status/${topicId}/`);
 
   if (!response.ok) {
     throw new Error(`Failed to get status: ${response.statusText}`);
@@ -165,7 +165,7 @@ export async function getSynthesisStatus(topicId: number): Promise<SynthesisStat
  * Get all topics
  */
 export async function getTopics(): Promise<Topic[]> {
-  const response = await fetch(`${API_URL}/api/topics`);
+  const response = await fetch(`${API_URL}/api/topics/`);
 
   if (!response.ok) {
     throw new Error(`Failed to get topics: ${response.statusText}`);
@@ -178,7 +178,7 @@ export async function getTopics(): Promise<Topic[]> {
  * Get topic by ID
  */
 export async function getTopic(topicId: number): Promise<Topic> {
-  const response = await fetch(`${API_URL}/api/topics/${topicId}`);
+  const response = await fetch(`${API_URL}/api/topics/${topicId}/`);
 
   if (!response.ok) {
     throw new Error(`Failed to get topic: ${response.statusText}`);
@@ -191,7 +191,7 @@ export async function getTopic(topicId: number): Promise<Topic> {
  * Get insights for a topic
  */
 export async function getInsights(topicId: number): Promise<Insight[]> {
-  const response = await fetch(`${API_URL}/api/topics/${topicId}/insights`);
+  const response = await fetch(`${API_URL}/api/topics/${topicId}/insights/`);
 
   if (!response.ok) {
     throw new Error(`Failed to get insights: ${response.statusText}`);
@@ -204,7 +204,7 @@ export async function getInsights(topicId: number): Promise<Insight[]> {
  * Get data points for a topic
  */
 export async function getDataPoints(topicId: number): Promise<DataPoint[]> {
-  const response = await fetch(`${API_URL}/api/topics/${topicId}/data-points`);
+  const response = await fetch(`${API_URL}/api/topics/${topicId}/data-points/`);
 
   if (!response.ok) {
     throw new Error(`Failed to get data points: ${response.statusText}`);
@@ -217,7 +217,7 @@ export async function getDataPoints(topicId: number): Promise<DataPoint[]> {
  * Get conversation profiles
  */
 export async function getConversationProfiles(): Promise<ConversationProfile[]> {
-  const response = await fetch(`${API_URL}/api/conversations/profiles`);
+  const response = await fetch(`${API_URL}/api/conversations/profiles/`);
 
   if (!response.ok) {
     throw new Error(`Failed to get profiles: ${response.statusText}`);
