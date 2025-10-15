@@ -1,10 +1,13 @@
 /**
- * API Client for Railway Backend
+ * API Client for InsightsLab Backend
  *
  * Handles all API calls to the FastAPI backend on Railway
  */
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+if (typeof window !== 'undefined') {
+  console.log('[InsightsLab] API URL:', API_URL);
+}
 
 // Types
 export interface Topic {
