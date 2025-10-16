@@ -2,13 +2,12 @@
 
 import { motion } from 'framer-motion';
 import { Card } from './card';
-import { ReactNode } from 'react';
+import { ReactNode, ComponentPropsWithoutRef } from 'react';
 
-interface AnimatedCardProps {
+interface AnimatedCardProps extends Omit<ComponentPropsWithoutRef<typeof Card>, 'children' | 'delay' | 'className'> {
   children: ReactNode;
   delay?: number;
   className?: string;
-  [key: string]: any;
 }
 
 export function AnimatedCard({ children, delay = 0, className = '', ...props }: AnimatedCardProps) {
