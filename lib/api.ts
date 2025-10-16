@@ -91,6 +91,19 @@ export interface ResearchResult {
   };
 }
 
+export interface ResearchSession {
+  id: number;
+  topic_name: string;
+  category: string;
+  status: 'researching' | 'ready_for_selection' | 'synthesizing' | 'completed' | 'failed';
+  video_count_requested: number;
+  total_videos_found: number;
+  created_at: string;
+  completed_at: string | null;
+  classification_confidence: number;
+  is_supported: boolean;
+}
+
 export interface SynthesisStatus {
   status: 'pending' | 'processing' | 'completed' | 'failed';
   progress: number;
@@ -110,6 +123,32 @@ export interface ConversationProfile {
 }
 
 // API Functions
+
+/**
+ * Get all research sessions
+ */
+export async function getResearchSessions(): Promise<ResearchSession[]> {
+  const response = await fetch(`${API_URL}/api/research/sessions`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to get research sessions: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get specific research session details
+ */
+export async function getResearchSession(sessionId: number): Promise<ResearchResult> {
+  const response = await fetch(`${API_URL}/api/research/${sessionId}`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to get research session: ${response.statusText}`);
+  }
+
+  return response.json();
+}
 
 /**
  * Start research agent for a topic

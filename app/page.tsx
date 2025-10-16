@@ -5,22 +5,29 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { getTopics, type Topic } from '@/lib/api';
+import { getTopics, getResearchSessions, type Topic, type ResearchSession } from '@/lib/api';
 import {
   Plus, FileText, TrendingUp, Sparkles, Brain,
-  Zap, Target, Search, BarChart3, AlertCircle
+  Zap, Target, Search, BarChart3, AlertCircle, Clock, PlayCircle
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export default function Dashboard() {
+  const router = useRouter();
   const [topics, setTopics] = useState<Topic[]>([]);
+  const [researchSessions, setResearchSessions] = useState<ResearchSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchTopics() {
+    async function fetchData() {
       try {
-        const data = await getTopics();
-        setTopics(data);
+        const [topicsData, sessionsData] = await Promise.all([
+          getTopics(),
+          getResearchSessions()
+        ]);
+        setTopics(topicsData);
+        setResearchSessions(sessionsData);
       } catch (err) {
         console.error('API Error:', err);
         setError(err instanceof Error ? err.message : 'Failed to connect to backend');
@@ -29,7 +36,7 @@ export default function Dashboard() {
       }
     }
 
-    fetchTopics();
+    fetchData();
   }, []);
 
   const getStatusBadge = (status: string) => {
@@ -177,6 +184,112 @@ export default function Dashboard() {
                 </CardDescription>
               </CardHeader>
             </Card>
+          </div>
+        )}
+
+        {/* Research Sessions in Progress */}
+        {!loading && !error && researchSessions.length > 0 && researchSessions.some(s => s.status !== 'completed') && (
+          <div className="mb-12">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold mb-2">Research in Progress</h2>
+              <p className="text-muted-foreground flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                Resume your ongoing research sessions
+              </p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {researchSessions
+                .filter(session => session.status !== 'completed')
+                .map((session) => {
+                  const getStatusInfo = (status: string) => {
+                    switch (status) {
+                      case 'researching':
+                        return {
+                          variant: 'secondary' as const,
+                          label: 'Discovering Videos',
+                          action: 'View Progress',
+                          icon: <PlayCircle className="h-4 w-4" />
+                        };
+                      case 'ready_for_selection':
+                        return {
+                          variant: 'default' as const,
+                          label: 'Ready to Review',
+                          action: 'Review Videos',
+                          icon: <Sparkles className="h-4 w-4" />
+                        };
+                      case 'synthesizing':
+                        return {
+                          variant: 'secondary' as const,
+                          label: 'Synthesizing',
+                          action: 'View Progress',
+                          icon: <Brain className="h-4 w-4" />
+                        };
+                      case 'failed':
+                        return {
+                          variant: 'destructive' as const,
+                          label: 'Failed',
+                          action: 'Retry',
+                          icon: <AlertCircle className="h-4 w-4" />
+                        };
+                      default:
+                        return {
+                          variant: 'outline' as const,
+                          label: 'Pending',
+                          action: 'Continue',
+                          icon: <Clock className="h-4 w-4" />
+                        };
+                    }
+                  };
+
+                  const statusInfo = getStatusInfo(session.status);
+
+                  return (
+                    <Card key={session.id} className="hover:shadow-lg transition-all border-2 hover:border-purple-500">
+                      <CardHeader>
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+                            {statusInfo.icon}
+                          </div>
+                          <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+                        </div>
+                        <CardTitle className="text-xl">{session.topic_name}</CardTitle>
+                        <CardDescription className="capitalize flex items-center gap-2">
+                          <Target className="h-3 w-3" />
+                          {session.category}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Search className="h-4 w-4 text-blue-600" />
+                            <span>{session.total_videos_found || 0} videos found</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Clock className="h-4 w-4 text-purple-600" />
+                            <span>Started {new Date(session.created_at).toLocaleDateString()}</span>
+                          </div>
+                          <Button
+                            onClick={() => {
+                              if (session.status === 'ready_for_selection') {
+                                router.push(`/topics/research/${session.id}/review`);
+                              } else if (session.status === 'synthesizing' || session.status === 'completed') {
+                                router.push(`/topics/research/${session.id}/results`);
+                              } else {
+                                router.push(`/topics/research/${session.id}/status`);
+                              }
+                            }}
+                            className="w-full gap-2 mt-2"
+                            variant={session.status === 'ready_for_selection' ? 'default' : 'outline'}
+                          >
+                            {statusInfo.icon}
+                            {statusInfo.action}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+            </div>
           </div>
         )}
 
