@@ -3,23 +3,15 @@
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from './card';
 import { Badge } from './badge';
-import { TrendingUp, TrendingDown, Activity, BarChart3 } from 'lucide-react';
+import { TrendingUp, Activity, BarChart3 } from 'lucide-react';
 import {
   PieChart,
   Pie,
   Cell,
-  BarChart,
-  Bar,
-  AreaChart,
-  Area,
   RadialBarChart,
   RadialBar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from 'recharts';
 
 interface DataPointChartProps {
@@ -54,7 +46,14 @@ export function DataPointChart({
 
   // Auto-detect best visualization type
   const detectVisualizationType = (): 'pie' | 'radial' | 'stat' => {
-    if (visualizationType !== 'auto') return visualizationType as any;
+    if (visualizationType !== 'auto') {
+      // Only return valid types for this component
+      if (visualizationType === 'pie' || visualizationType === 'radial' || visualizationType === 'stat') {
+        return visualizationType;
+      }
+      // Fallback to radial for other types
+      return 'radial';
+    }
 
     // Percentage data -> pie or radial
     if (unit.includes('%') || label.toLowerCase().includes('percent')) {

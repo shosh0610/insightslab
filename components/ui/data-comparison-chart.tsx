@@ -56,7 +56,7 @@ export function DataComparisonChart({
   }));
 
   // Custom tooltip
-  const CustomTooltip = ({ active, payload }: any) => {
+  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: typeof chartData[0] }> }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (

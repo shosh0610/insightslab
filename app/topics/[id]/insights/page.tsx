@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AnimatedCard } from '@/components/ui/animated-card';
 import { AnimatedCounter } from '@/components/ui/animated-counter';
-import { DataPointCard } from '@/components/ui/data-point-card';
 import { DataPointChart } from '@/components/ui/data-point-chart';
 import { DataComparisonChart } from '@/components/ui/data-comparison-chart';
 import { Badge } from '@/components/ui/badge';
