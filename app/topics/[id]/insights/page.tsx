@@ -3,8 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AnimatedCard } from '@/components/ui/animated-card';
+import { AnimatedCounter } from '@/components/ui/animated-counter';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -175,46 +178,52 @@ export default function InsightsPage() {
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-3 mb-8">
-          <Card>
+          <AnimatedCard delay={0.1}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Total Insights</CardTitle>
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{insights.length}</div>
+              <div className="text-3xl font-bold">
+                <AnimatedCounter value={insights.length} />
+              </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Top-ranked insights from all sources
               </p>
             </CardContent>
-          </Card>
+          </AnimatedCard>
 
-          <Card>
+          <AnimatedCard delay={0.2}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Data Points</CardTitle>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{dataPoints.length}</div>
+              <div className="text-3xl font-bold">
+                <AnimatedCounter value={dataPoints.length} />
+              </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Key statistics and facts
               </p>
             </CardContent>
-          </Card>
+          </AnimatedCard>
 
-          <Card>
+          <AnimatedCard delay={0.3}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">High Confidence</CardTitle>
               <Sparkles className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">
-                {insights.filter(i => i.confidence.toLowerCase() === 'high').length}
+                <AnimatedCounter
+                  value={insights.filter(i => i.confidence.toLowerCase() === 'high').length}
+                />
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Insights with high confidence
               </p>
             </CardContent>
-          </Card>
+          </AnimatedCard>
         </div>
 
         {/* Tabs */}
@@ -239,7 +248,7 @@ export default function InsightsPage() {
               </Card>
             ) : (
               filteredInsights.map((insight, index) => (
-                <Card key={insight.id} className="hover:shadow-md transition-shadow">
+                <AnimatedCard key={insight.id} delay={index * 0.05} className="hover:shadow-lg transition-shadow">
                   <CardHeader>
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
@@ -276,7 +285,7 @@ export default function InsightsPage() {
                       </div>
                     )}
                   </CardContent>
-                </Card>
+                </AnimatedCard>
               ))
             )}
           </TabsContent>
@@ -291,14 +300,25 @@ export default function InsightsPage() {
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
                 {filteredDataPoints.map((dp, index) => (
-                  <Card key={dp.id} className="hover:shadow-md transition-shadow">
+                  <AnimatedCard key={dp.id} delay={index * 0.1} className="hover:shadow-lg transition-shadow bg-gradient-to-br from-blue-50/50 to-purple-50/50 dark:from-blue-950/10 dark:to-purple-950/10">
                     <CardHeader>
-                      <div className="flex items-center gap-3 mb-2">
+                      <motion.div
+                        className="flex items-center gap-3 mb-2"
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.1 + 0.2 }}
+                      >
                         <Badge variant="outline" className="font-mono">
                           #{index + 1}
                         </Badge>
-                        <TrendingUp className="h-4 w-4 text-blue-600" />
-                      </div>
+                        <motion.div
+                          initial={{ rotate: -180, scale: 0 }}
+                          animate={{ rotate: 0, scale: 1 }}
+                          transition={{ delay: index * 0.1 + 0.3, type: 'spring' }}
+                        >
+                          <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        </motion.div>
+                      </motion.div>
                       <CardTitle className="text-base leading-relaxed">
                         {dp.text}
                       </CardTitle>
@@ -309,15 +329,22 @@ export default function InsightsPage() {
                           <p className="text-sm text-muted-foreground mb-1">Sources:</p>
                           <div className="flex flex-wrap gap-2">
                             {dp.source_authors.split(',').map((author, i) => (
-                              <Badge key={i} variant="secondary" className="text-xs">
-                                {author.trim()}
-                              </Badge>
+                              <motion.div
+                                key={i}
+                                initial={{ opacity: 0, scale: 0 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: index * 0.1 + 0.4 + i * 0.05 }}
+                              >
+                                <Badge variant="secondary" className="text-xs">
+                                  {author.trim()}
+                                </Badge>
+                              </motion.div>
                             ))}
                           </div>
                         </>
                       )}
                     </CardContent>
-                  </Card>
+                  </AnimatedCard>
                 ))}
               </div>
             )}
