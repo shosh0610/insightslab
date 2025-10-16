@@ -9,7 +9,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { AnimatedCard } from '@/components/ui/animated-card';
 import { AnimatedCounter } from '@/components/ui/animated-counter';
 import { DataPointChart } from '@/components/ui/data-point-chart';
-import { DataComparisonChart } from '@/components/ui/data-comparison-chart';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -66,19 +65,6 @@ export default function InsightsPage() {
     dp.label?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     dp.context?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     dp.source_authors?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  // Group data points by type for better visualization
-  const percentageDataPoints = filteredDataPoints.filter(dp =>
-    dp.unit?.includes('%') || dp.label.toLowerCase().includes('percent') || dp.label.toLowerCase().includes('reduction')
-  );
-
-  const timeBasedDataPoints = filteredDataPoints.filter(dp =>
-    dp.unit?.includes('hour') || dp.unit?.includes('minute') || dp.unit?.includes('day')
-  );
-
-  const otherDataPoints = filteredDataPoints.filter(dp =>
-    !percentageDataPoints.includes(dp) && !timeBasedDataPoints.includes(dp)
   );
 
   const getConfidenceBadge = (confidence: string) => {
@@ -315,93 +301,19 @@ export default function InsightsPage() {
                 </CardContent>
               </Card>
             ) : (
-              <>
-                {/* Comparison Chart for Percentages */}
-                {percentageDataPoints.length > 1 && (
-                  <DataComparisonChart
-                    title="Health & Lifestyle Impact Comparison"
-                    dataPoints={percentageDataPoints.map(dp => ({
-                      label: dp.label,
-                      value: dp.value,
-                      unit: dp.unit || '',
-                      context: dp.context || '',
-                      source_authors: dp.source_authors,
-                    }))}
-                    index={0}
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {filteredDataPoints.map((dp, index) => (
+                  <DataPointChart
+                    key={dp.id}
+                    label={dp.label}
+                    value={dp.value}
+                    unit={dp.unit || ''}
+                    context={dp.context || undefined}
+                    sources={dp.source_authors ? dp.source_authors.split(',').map(s => s.trim()) : []}
+                    index={index}
                   />
-                )}
-
-                {/* Individual Charts for Time-Based Data */}
-                {timeBasedDataPoints.length > 0 && (
-                  <>
-                    <h3 className="text-lg font-semibold mt-8 mb-4 flex items-center gap-2">
-                      <motion.div
-                        initial={{ rotate: -180 }}
-                        animate={{ rotate: 0 }}
-                        transition={{ duration: 0.5 }}
-                      >
-                        <TrendingUp className="h-5 w-5 text-blue-600" />
-                      </motion.div>
-                      Time-Based Metrics
-                    </h3>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {timeBasedDataPoints.map((dp, index) => (
-                        <DataPointChart
-                          key={dp.id}
-                          label={dp.label}
-                          value={dp.value}
-                          unit={dp.unit || ''}
-                          context={dp.context || undefined}
-                          sources={dp.source_authors ? dp.source_authors.split(',').map(s => s.trim()) : []}
-                          index={index}
-                          visualizationType="stat"
-                        />
-                      ))}
-                    </div>
-                  </>
-                )}
-
-                {/* Individual Charts for Percentage Data (if only one) */}
-                {percentageDataPoints.length === 1 && (
-                  <>
-                    <h3 className="text-lg font-semibold mt-8 mb-4">Percentage Metrics</h3>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {percentageDataPoints.map((dp, index) => (
-                        <DataPointChart
-                          key={dp.id}
-                          label={dp.label}
-                          value={dp.value}
-                          unit={dp.unit || ''}
-                          context={dp.context || undefined}
-                          sources={dp.source_authors ? dp.source_authors.split(',').map(s => s.trim()) : []}
-                          index={index}
-                          visualizationType="radial"
-                        />
-                      ))}
-                    </div>
-                  </>
-                )}
-
-                {/* Other Data Points */}
-                {otherDataPoints.length > 0 && (
-                  <>
-                    <h3 className="text-lg font-semibold mt-8 mb-4">Additional Insights</h3>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {otherDataPoints.map((dp, index) => (
-                        <DataPointChart
-                          key={dp.id}
-                          label={dp.label}
-                          value={dp.value}
-                          unit={dp.unit || ''}
-                          context={dp.context || undefined}
-                          sources={dp.source_authors ? dp.source_authors.split(',').map(s => s.trim()) : []}
-                          index={index}
-                        />
-                      ))}
-                    </div>
-                  </>
-                )}
-              </>
+                ))}
+              </div>
             )}
           </TabsContent>
         </Tabs>

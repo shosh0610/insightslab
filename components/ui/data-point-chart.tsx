@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from './card';
 import { Badge } from './badge';
-import { TrendingUp, Activity, BarChart3 } from 'lucide-react';
+import { BarChart3 } from 'lucide-react';
 import {
   PieChart,
   Pie,
@@ -176,18 +176,6 @@ export function DataPointChart({
           <span className="text-3xl font-semibold text-muted-foreground">
             {unit}
           </span>
-        )}
-      </motion.div>
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: delay + 0.5 }}
-        className="mt-4"
-      >
-        {value > 50 ? (
-          <TrendingUp className="h-8 w-8 text-green-500" />
-        ) : (
-          <Activity className="h-8 w-8 text-blue-500" />
         )}
       </motion.div>
     </div>
