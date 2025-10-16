@@ -12,7 +12,7 @@ import { DataPointChart } from '@/components/ui/data-point-chart';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { getTopic, getInsights, getDataPoints, type Topic, type Insight, type DataPoint } from '@/lib/api';
+import { getTopic, getInsights, getDataPoints, getRawInsights, getRawDataPoints, type Topic, type Insight, type DataPoint } from '@/lib/api';
 import {
   ArrowLeft,
   Sparkles,
@@ -30,22 +30,30 @@ export default function InsightsPage() {
   const [topic, setTopic] = useState<Topic | null>(null);
   const [insights, setInsights] = useState<Insight[]>([]);
   const [dataPoints, setDataPoints] = useState<DataPoint[]>([]);
+  const [rawInsights, setRawInsights] = useState<Insight[]>([]);
+  const [rawDataPoints, setRawDataPoints] = useState<DataPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [insightView, setInsightView] = useState<'top' | 'all'>('top');
+  const [dataPointView, setDataPointView] = useState<'top' | 'all'>('top');
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [topicData, insightsData, dataPointsData] = await Promise.all([
+        const [topicData, insightsData, dataPointsData, rawInsightsData, rawDataPointsData] = await Promise.all([
           getTopic(topicId),
           getInsights(topicId),
-          getDataPoints(topicId)
+          getDataPoints(topicId),
+          getRawInsights(topicId),
+          getRawDataPoints(topicId)
         ]);
 
         setTopic(topicData);
         setInsights(insightsData);
         setDataPoints(dataPointsData);
+        setRawInsights(rawInsightsData);
+        setRawDataPoints(rawDataPointsData);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load data');
       } finally {
@@ -61,11 +69,25 @@ export default function InsightsPage() {
     insight.source_authors?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const filteredRawInsights = rawInsights.filter(insight =>
+    insight.text?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    insight.source_authors?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   const filteredDataPoints = dataPoints.filter(dp =>
     dp.label?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     dp.context?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     dp.source_authors?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const filteredRawDataPoints = rawDataPoints.filter(dp =>
+    dp.label?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    dp.context?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    dp.source_authors?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const displayedInsights = insightView === 'top' ? filteredInsights : filteredRawInsights;
+  const displayedDataPoints = dataPointView === 'top' ? filteredDataPoints : filteredRawDataPoints;
 
   const getConfidenceBadge = (confidence: string) => {
     const variants: Record<string, { variant: 'default' | 'secondary' | 'outline'; label: string }> = {
@@ -243,14 +265,39 @@ export default function InsightsPage() {
           </TabsList>
 
           <TabsContent value="insights" className="space-y-4">
-            {filteredInsights.length === 0 ? (
+            {/* View Toggle */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={insightView === 'top' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setInsightView('top')}
+                >
+                  Top 10 Ranked ({insights.length})
+                </Button>
+                <Button
+                  variant={insightView === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setInsightView('all')}
+                >
+                  All Insights ({rawInsights.length})
+                </Button>
+              </div>
+              {insightView === 'all' && (
+                <Badge variant="secondary" className="text-xs">
+                  Includes all insights from individual videos
+                </Badge>
+              )}
+            </div>
+
+            {displayedInsights.length === 0 ? (
               <Card>
                 <CardContent className="pt-6 text-center text-muted-foreground">
                   {searchQuery ? 'No insights match your search' : 'No insights found'}
                 </CardContent>
               </Card>
             ) : (
-              filteredInsights.map((insight, index) => (
+              displayedInsights.map((insight, index) => (
                 <AnimatedCard key={insight.id} delay={index * 0.05} className="hover:shadow-lg transition-shadow">
                   <CardHeader>
                     <div className="flex items-start justify-between gap-4">
@@ -294,7 +341,32 @@ export default function InsightsPage() {
           </TabsContent>
 
           <TabsContent value="data-points" className="space-y-6">
-            {filteredDataPoints.length === 0 ? (
+            {/* View Toggle */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={dataPointView === 'top' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setDataPointView('top')}
+                >
+                  Top 8 Ranked ({dataPoints.length})
+                </Button>
+                <Button
+                  variant={dataPointView === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setDataPointView('all')}
+                >
+                  All Data Points ({rawDataPoints.length})
+                </Button>
+              </div>
+              {dataPointView === 'all' && (
+                <Badge variant="secondary" className="text-xs">
+                  Includes all data points from individual videos
+                </Badge>
+              )}
+            </div>
+
+            {displayedDataPoints.length === 0 ? (
               <Card>
                 <CardContent className="pt-6 text-center text-muted-foreground">
                   {searchQuery ? 'No data points match your search' : 'No data points found'}
@@ -302,7 +374,7 @@ export default function InsightsPage() {
               </Card>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {filteredDataPoints.map((dp, index) => (
+                {displayedDataPoints.map((dp, index) => (
                   <DataPointChart
                     key={dp.id}
                     label={dp.label}

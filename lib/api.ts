@@ -278,6 +278,32 @@ export async function getDataPoints(topicId: number): Promise<DataPoint[]> {
 }
 
 /**
+ * Get ALL raw insights for a topic (before ranking/deduplication)
+ */
+export async function getRawInsights(topicId: number): Promise<Insight[]> {
+  const response = await fetch(`${API_URL}/api/topics/${topicId}/insights/raw/`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to get raw insights: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get ALL raw data points for a topic (before ranking/deduplication)
+ */
+export async function getRawDataPoints(topicId: number): Promise<DataPoint[]> {
+  const response = await fetch(`${API_URL}/api/topics/${topicId}/data-points/raw/`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to get raw data points: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+/**
  * Get conversation profiles
  */
 export async function getConversationProfiles(): Promise<ConversationProfile[]> {
