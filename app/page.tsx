@@ -22,12 +22,19 @@ export default function Dashboard() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [topicsData, sessionsData] = await Promise.all([
-          getTopics(),
-          getResearchSessions()
-        ]);
+        // Fetch topics (required)
+        const topicsData = await getTopics();
         setTopics(topicsData);
-        setResearchSessions(sessionsData);
+
+        // Fetch research sessions (optional - gracefully handle failure)
+        try {
+          const sessionsData = await getResearchSessions();
+          setResearchSessions(sessionsData);
+        } catch (sessionsErr) {
+          console.log('Research sessions not available yet:', sessionsErr);
+          // Don't set error - just continue without sessions
+          setResearchSessions([]);
+        }
       } catch (err) {
         console.error('API Error:', err);
         setError(err instanceof Error ? err.message : 'Failed to connect to backend');
