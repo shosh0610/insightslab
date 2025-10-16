@@ -57,19 +57,38 @@ export interface DataPoint {
   created_at: string;
 }
 
-export interface ResearchRecommendation {
+export interface DiscoveredVideo {
+  id: number;
+  video_id: string;
+  title: string;
   channel_name: string;
-  search_query: string;
-  why_selected: string;
-  expected_topics: string[];
-  priority: number;
+  channel_handle: string;
+  url: string;
+  thumbnail_url: string;
+  view_count: number;
+  like_count: number;
+  duration: string;
+  published_at: string | null;
+  selection_score: number;
+  selection_reasoning: string;
+  synthesis_value: string;
+  is_selected: boolean;
 }
 
 export interface ResearchResult {
+  research_session_id: number;
+  status: string;
+  topic_name: string;
+  category: string;
+  total_videos_found: number;
+  videos: DiscoveredVideo[];
   search_strategy: string;
-  coverage_areas: string[];
-  recommended_videos: ResearchRecommendation[];
-  total_words?: number;
+  classification: {
+    primary: string;
+    supported: boolean;
+    confidence: number;
+    reasoning: string;
+  };
 }
 
 export interface SynthesisStatus {

@@ -9,94 +9,52 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { createTopic, triggerSynthesis, type ResearchResult, type ResearchRecommendation } from '@/lib/api';
-import { ArrowLeft, Sparkles, CheckCircle2, ExternalLink, FileText, Clock } from 'lucide-react';
-
-interface SelectedVideo {
-  url: string;
-  title: string;
-  author: string;
-  recommendation: ResearchRecommendation;
-}
+import { createTopic, triggerSynthesis, type ResearchResult, type DiscoveredVideo } from '@/lib/api';
+import { ArrowLeft, Sparkles, CheckCircle2, ExternalLink, FileText, Clock, Video } from 'lucide-react';
 
 export default function ReviewResearchPage() {
   const router = useRouter();
   const [researchResult, setResearchResult] = useState<ResearchResult | null>(null);
-  const [topicName, setTopicName] = useState('');
-  const [selectedVideos, setSelectedVideos] = useState<SelectedVideo[]>([]);
-  const [videoInputs, setVideoInputs] = useState<Record<number, { url: string; title: string }>>({});
+  const [selectedVideoIds, setSelectedVideoIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Load research results from sessionStorage
     const storedResult = sessionStorage.getItem('research_result');
-    const storedTopicName = sessionStorage.getItem('topic_name');
 
-    if (!storedResult || !storedTopicName) {
+    if (!storedResult) {
       router.push('/topics/new');
       return;
     }
 
-    setResearchResult(JSON.parse(storedResult));
-    setTopicName(storedTopicName);
-
-    // Pre-select all recommendations
     const result = JSON.parse(storedResult) as ResearchResult;
-    const initialInputs: Record<number, { url: string; title: string }> = {};
-    result.recommended_videos.forEach((_, index) => {
-      initialInputs[index] = { url: '', title: '' };
-    });
-    setVideoInputs(initialInputs);
+    setResearchResult(result);
+
+    // Pre-select videos that are already selected
+    const preSelectedIds = result.videos
+      .filter(v => v.is_selected)
+      .map(v => v.id);
+    setSelectedVideoIds(preSelectedIds);
   }, [router]);
 
-  const handleVideoUrlChange = (index: number, url: string) => {
-    setVideoInputs(prev => ({
-      ...prev,
-      [index]: { ...prev[index], url }
-    }));
+  const toggleVideoSelection = (videoId: number) => {
+    setSelectedVideoIds(prev => {
+      if (prev.includes(videoId)) {
+        return prev.filter(id => id !== videoId);
+      } else {
+        return [...prev, videoId];
+      }
+    });
   };
 
-  const handleVideoTitleChange = (index: number, title: string) => {
-    setVideoInputs(prev => ({
-      ...prev,
-      [index]: { ...prev[index], title }
-    }));
-  };
-
-  const toggleVideoSelection = (index: number, recommendation: ResearchRecommendation) => {
-    const input = videoInputs[index];
-
-    // If URL is empty, don't allow selection
-    if (!input.url) {
-      return;
-    }
-
-    const existingIndex = selectedVideos.findIndex(v => v.url === input.url);
-
-    if (existingIndex >= 0) {
-      // Remove from selection
-      setSelectedVideos(prev => prev.filter((_, i) => i !== existingIndex));
-    } else {
-      // Add to selection
-      const title = input.title || `${recommendation.channel_name} - ${recommendation.search_query}`;
-      setSelectedVideos(prev => [...prev, {
-        url: input.url,
-        title,
-        author: recommendation.channel_name,
-        recommendation
-      }]);
-    }
-  };
-
-  const isVideoSelected = (index: number): boolean => {
-    const input = videoInputs[index];
-    return selectedVideos.some(v => v.url === input.url);
+  const isVideoSelected = (videoId: number): boolean => {
+    return selectedVideoIds.includes(videoId);
   };
 
   const handleSynthesize = async () => {
-    if (selectedVideos.length === 0) {
-      setError('Please add at least one video');
+    if (!researchResult || selectedVideoIds.length === 0) {
+      setError('Please select at least one video');
       return;
     }
 
@@ -104,19 +62,31 @@ export default function ReviewResearchPage() {
     setError(null);
 
     try {
-      // Create topic with selected sources
-      const topic = await createTopic(
-        topicName,
-        selectedVideos.map(v => ({
-          url: v.url,
-          title: v.title,
-          author: v.author,
-          source_type: 'youtube'
-        }))
+      // Send selected video IDs to backend for synthesis
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/research/${researchResult.research_session_id}/select-videos`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ video_ids: selectedVideoIds }),
+        }
       );
 
+      if (!response.ok) {
+        throw new Error('Failed to select videos');
+      }
+
       // Trigger synthesis
-      await triggerSynthesis(topic.id);
+      const synthesisResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/research/${researchResult.research_session_id}/synthesize`,
+        {
+          method: 'POST',
+        }
+      );
+
+      if (!synthesisResponse.ok) {
+        throw new Error('Failed to start synthesis');
+      }
 
       // Clear session storage
       sessionStorage.removeItem('research_result');
@@ -124,7 +94,7 @@ export default function ReviewResearchPage() {
       sessionStorage.removeItem('video_count');
 
       // Navigate to synthesis progress page
-      router.push(`/topics/${topic.id}/synthesize`);
+      router.push(`/topics/research/${researchResult.research_session_id}/results`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start synthesis');
       setLoading(false);
@@ -139,6 +109,7 @@ export default function ReviewResearchPage() {
     );
   }
 
+  const selectedVideos = researchResult?.videos.filter(v => selectedVideoIds.includes(v.id)) || [];
   const estimatedWords = selectedVideos.length * 3000;
   const estimatedTime = Math.ceil(selectedVideos.length * 0.2);
 
@@ -156,8 +127,8 @@ export default function ReviewResearchPage() {
                 </Button>
               </Link>
               <div>
-                <h1 className="text-xl font-bold">{topicName}</h1>
-                <p className="text-sm text-muted-foreground">Review and select sources</p>
+                <h1 className="text-xl font-bold">{researchResult.topic_name}</h1>
+                <p className="text-sm text-muted-foreground">Review and select sources • {researchResult.category}</p>
               </div>
             </div>
 
@@ -203,92 +174,102 @@ export default function ReviewResearchPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              <Label>Coverage Areas:</Label>
-              <div className="flex flex-wrap gap-2">
-                {researchResult.coverage_areas.map((area, i) => (
-                  <Badge key={i} variant="secondary">{area}</Badge>
-                ))}
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-muted-foreground">Category:</span>
+                <Badge variant="secondary" className="ml-2">{researchResult.category}</Badge>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Videos Found:</span>
+                <span className="ml-2 font-semibold">{researchResult.total_videos_found}</span>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Video Recommendations */}
+        {/* Discovered Videos */}
         <div className="space-y-4">
           <div>
-            <h2 className="text-2xl font-semibold mb-2">Recommended Sources</h2>
+            <h2 className="text-2xl font-semibold mb-2">Discovered Videos</h2>
             <p className="text-muted-foreground">
-              Add YouTube URLs for each recommendation. The AI has identified the best videos to search for.
+              AI has found {researchResult.total_videos_found} relevant videos. Select which ones to synthesize.
             </p>
           </div>
 
-          {researchResult.recommended_videos.map((rec, index) => (
-            <Card key={index} className={isVideoSelected(index) ? 'border-blue-500 shadow-md' : ''}>
+          {researchResult.videos.map((video) => (
+            <Card key={video.id} className={isVideoSelected(video.id) ? 'border-blue-500 shadow-md' : ''}>
               <CardHeader>
                 <div className="flex items-start gap-4">
                   <Checkbox
-                    checked={isVideoSelected(index)}
-                    onCheckedChange={() => toggleVideoSelection(index, rec)}
-                    disabled={!videoInputs[index]?.url || loading}
+                    checked={isVideoSelected(video.id)}
+                    onCheckedChange={() => toggleVideoSelection(video.id)}
+                    disabled={loading}
                     className="mt-1"
                   />
                   <div className="flex-1 space-y-3">
-                    <div>
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <CardTitle className="text-lg">{rec.channel_name}</CardTitle>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Search: &quot;<span className="italic">{rec.search_query}</span>&quot;
-                          </p>
-                        </div>
-                        <Badge variant="outline" className="ml-2">
-                          Priority: {rec.priority}/10
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-foreground/80 mt-2">{rec.why_selected}</p>
-                      {rec.expected_topics.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {rec.expected_topics.map((topic, i) => (
-                            <Badge key={i} variant="secondary" className="text-xs">
-                              {topic}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor={`url-${index}`}>YouTube URL</Label>
-                      <div className="flex gap-2">
-                        <Input
-                          id={`url-${index}`}
-                          placeholder="https://www.youtube.com/watch?v=..."
-                          value={videoInputs[index]?.url || ''}
-                          onChange={(e) => handleVideoUrlChange(index, e.target.value)}
-                          disabled={loading}
+                    {/* Video Thumbnail and Info */}
+                    <div className="flex gap-4">
+                      {video.thumbnail_url && (
+                        <img
+                          src={video.thumbnail_url}
+                          alt={video.title}
+                          className="w-40 h-24 object-cover rounded"
                         />
-                        {videoInputs[index]?.url && (
+                      )}
+                      <div className="flex-1">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <CardTitle className="text-lg leading-snug">{video.title}</CardTitle>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {video.channel_name} • {video.duration}
+                            </p>
+                          </div>
+                          <Badge variant="outline" className="ml-2">
+                            Score: {video.selection_score.toFixed(1)}
+                          </Badge>
+                        </div>
+
+                        {/* Stats */}
+                        <div className="flex gap-4 text-xs text-muted-foreground mt-2">
+                          <span>{(video.view_count / 1000).toFixed(1)}K views</span>
+                          {video.like_count > 0 && (
+                            <span>{(video.like_count / 1000).toFixed(1)}K likes</span>
+                          )}
+                          {video.published_at && (
+                            <span>{new Date(video.published_at).toLocaleDateString()}</span>
+                          )}
+                        </div>
+
+                        {/* Selection Reasoning */}
+                        {video.selection_reasoning && (
+                          <p className="text-sm text-foreground/80 mt-2 leading-relaxed">
+                            {video.selection_reasoning}
+                          </p>
+                        )}
+
+                        {/* Synthesis Value */}
+                        {video.synthesis_value && (
+                          <div className="mt-2">
+                            <Badge variant="secondary" className="text-xs">
+                              {video.synthesis_value}
+                            </Badge>
+                          </div>
+                        )}
+
+                        {/* Video Link */}
+                        <div className="mt-2">
                           <Button
                             variant="outline"
                             size="sm"
                             asChild
                           >
-                            <a href={videoInputs[index].url} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink className="h-4 w-4" />
+                            <a href={video.url} target="_blank" rel="noopener noreferrer" className="gap-2">
+                              <ExternalLink className="h-3 w-3" />
+                              Watch on YouTube
                             </a>
                           </Button>
-                        )}
+                        </div>
                       </div>
-
-                      <Label htmlFor={`title-${index}`}>Video Title (optional)</Label>
-                      <Input
-                        id={`title-${index}`}
-                        placeholder="Leave empty to auto-generate"
-                        value={videoInputs[index]?.title || ''}
-                        onChange={(e) => handleVideoTitleChange(index, e.target.value)}
-                        disabled={loading}
-                      />
                     </div>
                   </div>
                 </div>
