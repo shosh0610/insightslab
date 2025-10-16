@@ -46,8 +46,14 @@ export interface Insight {
 export interface DataPoint {
   id: number;
   topic_id: number;
-  text: string;
+  label: string;
+  value: number;
+  unit: string | null;
+  context: string | null;
+  context_note: string | null;
   source_authors: string;
+  source_count: number;
+  date_recorded: string | null;
   created_at: string;
 }
 

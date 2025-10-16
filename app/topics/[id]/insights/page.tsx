@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AnimatedCard } from '@/components/ui/animated-card';
 import { AnimatedCounter } from '@/components/ui/animated-counter';
+import { DataPointCard } from '@/components/ui/data-point-card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -61,7 +62,8 @@ export default function InsightsPage() {
   );
 
   const filteredDataPoints = dataPoints.filter(dp =>
-    dp.text?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    dp.label?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    dp.context?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     dp.source_authors?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -88,7 +90,8 @@ export default function InsightsPage() {
       ).join('') +
       `\n## Data Points (${dataPoints.length})\n\n` +
       dataPoints.map((dp, i) =>
-        `${i + 1}. ${dp.text}\n` +
+        `${i + 1}. ${dp.label}: ${dp.value}${dp.unit || ''}\n` +
+        (dp.context ? `   Context: ${dp.context}\n` : '') +
         `   Sources: ${dp.source_authors}\n\n`
       ).join('');
 
@@ -298,53 +301,17 @@ export default function InsightsPage() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {filteredDataPoints.map((dp, index) => (
-                  <AnimatedCard key={dp.id} delay={index * 0.1} className="hover:shadow-lg transition-shadow bg-gradient-to-br from-blue-50/50 to-purple-50/50 dark:from-blue-950/10 dark:to-purple-950/10">
-                    <CardHeader>
-                      <motion.div
-                        className="flex items-center gap-3 mb-2"
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.1 + 0.2 }}
-                      >
-                        <Badge variant="outline" className="font-mono">
-                          #{index + 1}
-                        </Badge>
-                        <motion.div
-                          initial={{ rotate: -180, scale: 0 }}
-                          animate={{ rotate: 0, scale: 1 }}
-                          transition={{ delay: index * 0.1 + 0.3, type: 'spring' }}
-                        >
-                          <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                        </motion.div>
-                      </motion.div>
-                      <CardTitle className="text-base leading-relaxed">
-                        {dp.text}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {dp.source_authors && (
-                        <>
-                          <p className="text-sm text-muted-foreground mb-1">Sources:</p>
-                          <div className="flex flex-wrap gap-2">
-                            {dp.source_authors.split(',').map((author, i) => (
-                              <motion.div
-                                key={i}
-                                initial={{ opacity: 0, scale: 0 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: index * 0.1 + 0.4 + i * 0.05 }}
-                              >
-                                <Badge variant="secondary" className="text-xs">
-                                  {author.trim()}
-                                </Badge>
-                              </motion.div>
-                            ))}
-                          </div>
-                        </>
-                      )}
-                    </CardContent>
-                  </AnimatedCard>
+                  <DataPointCard
+                    key={dp.id}
+                    label={dp.label}
+                    value={dp.value}
+                    unit={dp.unit || ''}
+                    context={dp.context || undefined}
+                    sources={dp.source_authors ? dp.source_authors.split(',').map(s => s.trim()) : []}
+                    index={index}
+                  />
                 ))}
               </div>
             )}
