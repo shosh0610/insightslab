@@ -101,17 +101,29 @@ export default function InsightsPage() {
   };
 
   const exportToText = () => {
+    // Use currently displayed data based on view toggle
+    const insightsToExport = insightView === 'top' ? insights : rawInsights;
+    const dataPointsToExport = dataPointView === 'top' ? dataPoints : rawDataPoints;
+
+    const insightsLabel = insightView === 'top'
+      ? `Top Ranked Insights (${insights.length})`
+      : `All Insights (${rawInsights.length})`;
+
+    const dataPointsLabel = dataPointView === 'top'
+      ? `Top Ranked Data Points (${dataPoints.length})`
+      : `All Data Points (${rawDataPoints.length})`;
+
     const content = `# ${topic?.name} - Insights & Data Points\n\n` +
-      `## Top Insights (${insights.length})\n\n` +
-      insights.map((insight, i) =>
+      `## ${insightsLabel}\n\n` +
+      insightsToExport.map((insight, i) =>
         `${i + 1}. ${insight.text}\n` +
         `   Confidence: ${insight.confidence}\n` +
         `   Sources: ${insight.source_authors}\n` +
         (insight.note ? `   Note: ${insight.note}\n` : '') +
         '\n'
       ).join('') +
-      `\n## Data Points (${dataPoints.length})\n\n` +
-      dataPoints.map((dp, i) =>
+      `\n## ${dataPointsLabel}\n\n` +
+      dataPointsToExport.map((dp, i) =>
         `${i + 1}. ${dp.label}: ${dp.value}${dp.unit || ''}\n` +
         (dp.context ? `   Context: ${dp.context}\n` : '') +
         `   Sources: ${dp.source_authors}\n\n`
@@ -121,7 +133,8 @@ export default function InsightsPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${topic?.slug || 'insights'}.txt`;
+    const fileName = `${topic?.slug || 'insights'}-${insightView === 'top' && dataPointView === 'top' ? 'ranked' : 'all'}.txt`;
+    a.download = fileName;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
