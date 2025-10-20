@@ -33,14 +33,35 @@ export interface Source {
   created_at: string;
 }
 
+export interface ProductionNote {
+  why_it_matters: string;
+  what_to_do: string;
+  when_it_applies: string;
+  common_mistakes: string;
+}
+
+export interface SupportingDataPoint {
+  value: number;
+  unit: string;
+  label: string;
+  context: string;
+}
+
 export interface Insight {
   id: number;
-  topic_id: number;
-  text: string;
+  topic_id?: number;
+  insight?: string;  // New API format
+  text?: string;     // Old format (deprecated)
   confidence: string;
-  source_authors: string;
-  note: string | null;
-  created_at: string;
+  source_authors?: string;
+  sources?: string[];  // New API format
+  note?: string | null;  // Old format - fallback
+  production_note?: ProductionNote;  // New API format - structured notes
+  supporting_data?: SupportingDataPoint[];  // New API format - linked data points
+  relevance_score?: number;
+  relevance_category?: string;
+  insight_type?: string;
+  created_at?: string;
 }
 
 export interface DataPoint {

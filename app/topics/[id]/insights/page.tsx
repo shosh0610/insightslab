@@ -64,15 +64,19 @@ export default function InsightsPage() {
     fetchData();
   }, [topicId]);
 
-  const filteredInsights = insights.filter(insight =>
-    insight.text?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    insight.source_authors?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredInsights = insights.filter(insight => {
+    const insightText = insight.insight || insight.text || '';
+    const sources = insight.sources?.join(', ') || insight.source_authors || '';
+    return insightText.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           sources.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
-  const filteredRawInsights = rawInsights.filter(insight =>
-    insight.text?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    insight.source_authors?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredRawInsights = rawInsights.filter(insight => {
+    const insightText = insight.insight || insight.text || '';
+    const sources = insight.sources?.join(', ') || insight.source_authors || '';
+    return insightText.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           sources.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   const filteredDataPoints = dataPoints.filter(dp =>
     dp.label?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -115,13 +119,41 @@ export default function InsightsPage() {
 
     const content = `# ${topic?.name} - Insights & Data Points\n\n` +
       `## ${insightsLabel}\n\n` +
-      insightsToExport.map((insight, i) =>
-        `${i + 1}. ${insight.text}\n` +
-        `   Confidence: ${insight.confidence}\n` +
-        `   Sources: ${insight.source_authors}\n` +
-        (insight.note ? `   Note: ${insight.note}\n` : '') +
-        '\n'
-      ).join('') +
+      insightsToExport.map((insight, i) => {
+        const insightText = insight.insight || insight.text || '';
+        const sources = insight.sources?.join(', ') || insight.source_authors || '';
+        let text = `${i + 1}. ${insightText}\n` +
+                  `   Confidence: ${insight.confidence}\n` +
+                  `   Sources: ${sources}\n`;
+
+        if (insight.production_note) {
+          text += '\n   📝 PRODUCTION NOTES:\n';
+          if (insight.production_note.why_it_matters) {
+            text += `   💡 Why It Matters: ${insight.production_note.why_it_matters}\n`;
+          }
+          if (insight.production_note.what_to_do) {
+            text += `   ✅ What To Do: ${insight.production_note.what_to_do}\n`;
+          }
+          if (insight.production_note.when_it_applies) {
+            text += `   🎯 When It Applies: ${insight.production_note.when_it_applies}\n`;
+          }
+          if (insight.production_note.common_mistakes) {
+            text += `   ⚠️ Common Mistakes: ${insight.production_note.common_mistakes}\n`;
+          }
+        } else if (insight.note) {
+          text += `   Note: ${insight.note}\n`;
+        }
+
+        if (insight.supporting_data && insight.supporting_data.length > 0) {
+          text += '\n   📊 SUPPORTING DATA:\n';
+          insight.supporting_data.forEach(dp => {
+            text += `   - ${dp.label}: ${dp.value} ${dp.unit}\n`;
+            text += `     ${dp.context}\n`;
+          });
+        }
+
+        return text + '\n';
+      }).join('') +
       `\n## ${dataPointsLabel}\n\n` +
       dataPointsToExport.map((dp, i) =>
         `${i + 1}. ${dp.label}: ${dp.value}${dp.unit || ''}\n` +
@@ -310,46 +342,136 @@ export default function InsightsPage() {
                 </CardContent>
               </Card>
             ) : (
-              displayedInsights.map((insight, index) => (
-                <AnimatedCard key={insight.id} delay={index * 0.05} className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <Badge variant="outline" className="font-mono">
-                            #{index + 1}
-                          </Badge>
-                          {getConfidenceBadge(insight.confidence)}
-                        </div>
-                        <CardTitle className="text-lg leading-relaxed">
-                          {insight.text}
-                        </CardTitle>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {insight.source_authors && (
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-1">Sources:</p>
-                        <div className="flex flex-wrap gap-2">
-                          {insight.source_authors.split(',').map((author, i) => (
-                            <Badge key={i} variant="secondary">
-                              {author.trim()}
+              displayedInsights.map((insight, index) => {
+                const insightText = insight.insight || insight.text || '';
+                const sources = insight.sources || (insight.source_authors ? insight.source_authors.split(',').map(s => s.trim()) : []);
+                const hasProductionNote = insight.production_note && Object.keys(insight.production_note).length > 0;
+
+                return (
+                  <AnimatedCard key={insight.id} delay={index * 0.05} className="hover:shadow-lg transition-shadow">
+                    <CardHeader>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <Badge variant="outline" className="font-mono">
+                              #{index + 1}
                             </Badge>
-                          ))}
+                            {getConfidenceBadge(insight.confidence)}
+                            {insight.relevance_category && (
+                              <Badge variant={insight.relevance_category === 'DIRECT_ANSWER' ? 'default' : 'secondary'}>
+                                {insight.relevance_category === 'DIRECT_ANSWER' ? '🎯 Direct Answer' :
+                                 insight.relevance_category === 'FOUNDATIONAL' ? '📚 Foundational' :
+                                 '🔗 Related'}
+                              </Badge>
+                            )}
+                          </div>
+                          <CardTitle className="text-lg leading-relaxed">
+                            {insightText}
+                          </CardTitle>
                         </div>
                       </div>
-                    )}
-                    {insight.note && (
-                      <div className="pt-2 border-t">
-                        <p className="text-sm text-muted-foreground">
-                          <span className="font-semibold">Note:</span> {insight.note}
-                        </p>
-                      </div>
-                    )}
-                  </CardContent>
-                </AnimatedCard>
-              ))
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Sources */}
+                      {sources.length > 0 && (
+                        <div>
+                          <p className="text-sm text-muted-foreground mb-1">Sources:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {sources.map((author, i) => (
+                              <Badge key={i} variant="secondary">
+                                {author}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Supporting Data Points */}
+                      {insight.supporting_data && insight.supporting_data.length > 0 && (
+                        <div className="pt-3 border-t">
+                          <p className="text-sm font-semibold text-muted-foreground mb-2">📊 Supporting Data:</p>
+                          <div className="space-y-2">
+                            {insight.supporting_data.map((dp, i) => (
+                              <div key={i} className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-3">
+                                <div className="flex items-baseline gap-2">
+                                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                                    {dp.value}
+                                  </span>
+                                  <span className="text-sm font-medium text-blue-600/80 dark:text-blue-400/80">
+                                    {dp.unit}
+                                  </span>
+                                </div>
+                                <p className="text-sm font-medium mt-1">{dp.label}</p>
+                                <p className="text-xs text-muted-foreground mt-1">{dp.context}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Production Notes - New Format */}
+                      {hasProductionNote && (
+                        <div className="pt-3 border-t space-y-3">
+                          <p className="text-sm font-semibold text-muted-foreground mb-2">📝 Production Notes:</p>
+
+                          {insight.production_note!.why_it_matters && (
+                            <div className="bg-amber-50 dark:bg-amber-950/20 rounded-lg p-3">
+                              <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-1">
+                                💡 WHY IT MATTERS
+                              </p>
+                              <p className="text-sm text-slate-700 dark:text-slate-300">
+                                {insight.production_note!.why_it_matters}
+                              </p>
+                            </div>
+                          )}
+
+                          {insight.production_note!.what_to_do && (
+                            <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-3">
+                              <p className="text-xs font-semibold text-green-700 dark:text-green-400 mb-1">
+                                ✅ WHAT TO DO
+                              </p>
+                              <p className="text-sm text-slate-700 dark:text-slate-300">
+                                {insight.production_note!.what_to_do}
+                              </p>
+                            </div>
+                          )}
+
+                          {insight.production_note!.when_it_applies && (
+                            <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-3">
+                              <p className="text-xs font-semibold text-blue-700 dark:text-blue-400 mb-1">
+                                🎯 WHEN IT APPLIES
+                              </p>
+                              <p className="text-sm text-slate-700 dark:text-slate-300">
+                                {insight.production_note!.when_it_applies}
+                              </p>
+                            </div>
+                          )}
+
+                          {insight.production_note!.common_mistakes && (
+                            <div className="bg-red-50 dark:bg-red-950/20 rounded-lg p-3">
+                              <p className="text-xs font-semibold text-red-700 dark:text-red-400 mb-1">
+                                ⚠️ COMMON MISTAKES
+                              </p>
+                              <p className="text-sm text-slate-700 dark:text-slate-300">
+                                {insight.production_note!.common_mistakes}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Fallback to old note format if no production note */}
+                      {!hasProductionNote && insight.note && (
+                        <div className="pt-2 border-t">
+                          <p className="text-sm text-muted-foreground">
+                            <span className="font-semibold">Note:</span> {insight.note}
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </AnimatedCard>
+                );
+              })
             )}
           </TabsContent>
 
