@@ -346,6 +346,7 @@ export async function getViralInsights(topicId: number): Promise<Insight[]> {
 
 /**
  * Generate a viral video script for a specific insight
+ * Saves to database and returns the script with version info
  */
 export async function generateViralScript(topicId: number, insightId: number): Promise<GeneratedScript> {
   const response = await fetch(`${API_URL}/api/topics/${topicId}/insights/${insightId}/viral-script`, {
@@ -357,6 +358,36 @@ export async function generateViralScript(topicId: number, insightId: number): P
 
   if (!response.ok) {
     throw new Error(`Failed to generate script: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get all saved viral script versions for an insight
+ */
+export async function getViralScripts(topicId: number, insightId: number): Promise<any[]> {
+  const response = await fetch(`${API_URL}/api/topics/${topicId}/insights/${insightId}/viral-scripts`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to get scripts: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get latest viral script for an insight
+ */
+export async function getLatestViralScript(topicId: number, insightId: number): Promise<GeneratedScript | null> {
+  const response = await fetch(`${API_URL}/api/topics/${topicId}/insights/${insightId}/viral-scripts/latest`);
+
+  if (response.status === 404) {
+    return null; // No scripts exist yet
+  }
+
+  if (!response.ok) {
+    throw new Error(`Failed to get latest script: ${response.statusText}`);
   }
 
   return response.json();

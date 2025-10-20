@@ -13,7 +13,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { getTopic, getInsights, getDataPoints, getRawInsights, getRawDataPoints, getViralInsights, generateViralScript, type Topic, type Insight, type DataPoint, type GeneratedScript } from '@/lib/api';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getTopic, getInsights, getDataPoints, getRawInsights, getRawDataPoints, getViralInsights, generateViralScript, getViralScripts, getLatestViralScript, type Topic, type Insight, type DataPoint, type GeneratedScript } from '@/lib/api';
 import {
   ArrowLeft,
   Sparkles,
@@ -47,6 +48,10 @@ export default function InsightsPage() {
   const [generatedScript, setGeneratedScript] = useState<GeneratedScript | null>(null);
   const [showScriptModal, setShowScriptModal] = useState(false);
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
+  const [scriptCounts, setScriptCounts] = useState<Record<number, number>>({});
+  const [availableVersions, setAvailableVersions] = useState<any[]>([]);
+  const [selectedVersion, setSelectedVersion] = useState<number>(1);
+  const [loadingScripts, setLoadingScripts] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -66,6 +71,20 @@ export default function InsightsPage() {
         setRawInsights(rawInsightsData);
         setRawDataPoints(rawDataPointsData);
         setViralInsights(viralInsightsData);
+
+        // Load script counts for viral insights
+        const counts: Record<number, number> = {};
+        await Promise.all(
+          viralInsightsData.map(async (insight) => {
+            try {
+              const scripts = await getViralScripts(topicId, insight.id);
+              counts[insight.id] = scripts.length;
+            } catch {
+              counts[insight.id] = 0;
+            }
+          })
+        );
+        setScriptCounts(counts);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load data');
       } finally {
@@ -133,17 +152,79 @@ export default function InsightsPage() {
     );
   };
 
-  const handleGenerateScript = async (insightId: number) => {
+  const handleGenerateScript = async (insightId: number, forceNew = false) => {
     setGeneratingScript(insightId);
+    setLoadingScripts(true);
+
     try {
+      // Check if scripts already exist (unless forcing new)
+      if (!forceNew) {
+        const existingScripts = await getViralScripts(topicId, insightId);
+
+        if (existingScripts && existingScripts.length > 0) {
+          // Scripts exist - load the latest one
+          setAvailableVersions(existingScripts);
+          setSelectedVersion(existingScripts[0].version); // Latest version
+          setGeneratedScript({
+            id: existingScripts[0].id,
+            insight_id: insightId,
+            insight_text: '',
+            viral_score: existingScripts[0].viral_score,
+            viral_tier: existingScripts[0].viral_tier,
+            version: existingScripts[0].version,
+            total_versions: existingScripts.length,
+            created_at: existingScripts[0].created_at,
+            script: existingScripts[0].script_json
+          });
+          setShowScriptModal(true);
+          return;
+        }
+      }
+
+      // No existing scripts or forcing new - generate fresh
       const script = await generateViralScript(topicId, insightId);
       setGeneratedScript(script);
+
+      // Reload scripts to get updated versions
+      const updatedScripts = await getViralScripts(topicId, insightId);
+      setAvailableVersions(updatedScripts);
+      setSelectedVersion(script.version || 1);
+
+      // Update script count
+      setScriptCounts(prev => ({
+        ...prev,
+        [insightId]: updatedScripts.length
+      }));
+
       setShowScriptModal(true);
     } catch (err) {
       console.error('Failed to generate script:', err);
       alert('Failed to generate script. Please try again.');
     } finally {
       setGeneratingScript(null);
+      setLoadingScripts(false);
+    }
+  };
+
+  const handleRegenerateScript = async (insightId: number) => {
+    await handleGenerateScript(insightId, true);
+  };
+
+  const handleVersionChange = (version: number) => {
+    const selectedScript = availableVersions.find(v => v.version === version);
+    if (selectedScript) {
+      setSelectedVersion(version);
+      setGeneratedScript({
+        id: selectedScript.id,
+        insight_id: selectedScript.insight_id,
+        insight_text: generatedScript?.insight_text || '',
+        viral_score: selectedScript.viral_score,
+        viral_tier: selectedScript.viral_tier,
+        version: selectedScript.version,
+        total_versions: availableVersions.length,
+        created_at: selectedScript.created_at,
+        script: selectedScript.script_json
+      });
     }
   };
 
@@ -571,24 +652,32 @@ export default function InsightsPage() {
                             {insightText}
                           </CardTitle>
                         </div>
-                        <Button
-                          onClick={() => handleGenerateScript(insight.id)}
-                          disabled={generatingScript === insight.id}
-                          className="gap-2 shrink-0"
-                          variant="outline"
-                        >
-                          {generatingScript === insight.id ? (
-                            <>
-                              <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                              Generating...
-                            </>
-                          ) : (
-                            <>
-                              <Video className="h-4 w-4" />
-                              Generate Script
-                            </>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {scriptCounts[insight.id] > 0 && (
+                            <Badge variant="outline" className="gap-1">
+                              <Video className="h-3 w-3" />
+                              {scriptCounts[insight.id]}
+                            </Badge>
                           )}
-                        </Button>
+                          <Button
+                            onClick={() => handleGenerateScript(insight.id)}
+                            disabled={generatingScript === insight.id}
+                            className="gap-2"
+                            variant="outline"
+                          >
+                            {generatingScript === insight.id ? (
+                              <>
+                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                Generating...
+                              </>
+                            ) : (
+                              <>
+                                <Video className="h-4 w-4" />
+                                {scriptCounts[insight.id] > 0 ? 'View Scripts' : 'Generate Script'}
+                              </>
+                            )}
+                          </Button>
+                        </div>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -864,18 +953,65 @@ export default function InsightsPage() {
       <Dialog open={showScriptModal} onOpenChange={setShowScriptModal}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Video className="h-5 w-5" />
-              Viral Video Script
-            </DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="flex items-center gap-2">
+                <Video className="h-5 w-5" />
+                Viral Video Script
+              </DialogTitle>
+              <div className="flex items-center gap-2">
+                {availableVersions.length > 1 && (
+                  <Select
+                    value={selectedVersion.toString()}
+                    onValueChange={(v) => handleVersionChange(parseInt(v))}
+                  >
+                    <SelectTrigger className="w-32">
+                      <SelectValue placeholder="Version" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableVersions.map((v) => (
+                        <SelectItem key={v.version} value={v.version.toString()}>
+                          Version {v.version}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                {generatedScript && (
+                  <Button
+                    onClick={() => handleRegenerateScript(generatedScript.insight_id)}
+                    variant="default"
+                    size="sm"
+                    disabled={generatingScript === generatedScript.insight_id}
+                    className="gap-2"
+                  >
+                    {generatingScript === generatedScript.insight_id ? (
+                      <>
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                        Regenerating...
+                      </>
+                    ) : (
+                      <>
+                        <Video className="h-4 w-4" />
+                        Regenerate
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            </div>
             <DialogDescription>
               {generatedScript?.viral_tier && (
-                <div className="flex items-center gap-2 mt-2">
+                <div className="flex items-center gap-2 mt-2 flex-wrap">
                   {getViralTierBadge(generatedScript.viral_tier)}
                   <Badge variant="secondary">{generatedScript.viral_score}/100</Badge>
                   <span className="text-sm text-muted-foreground">
                     {generatedScript.script?.total_duration} • {generatedScript.script?.total_word_count} words
                   </span>
+                  {availableVersions.length > 0 && (
+                    <Badge variant="outline" className="text-xs">
+                      v{selectedVersion} of {availableVersions.length}
+                    </Badge>
+                  )}
                 </div>
               )}
             </DialogDescription>
