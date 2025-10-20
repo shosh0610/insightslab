@@ -276,6 +276,12 @@ export default function InsightsPage() {
     setGeneratingCompositeScript(true);
     try {
       const script = await generateCompositeScript(topicId, selectedInsightIds, scriptType);
+      console.log('📝 Composite script received:', script);
+      console.log('📝 Script structure check:', {
+        has_script_json: !!script.script_json,
+        has_script: script.script_json ? !!script.script_json.script : false,
+        script_keys: script.script_json?.script ? Object.keys(script.script_json.script) : []
+      });
       setCompositeScript(script);
 
       if (scriptType === 'long-form') {
@@ -285,6 +291,7 @@ export default function InsightsPage() {
       }
     } catch (err) {
       console.error('Failed to generate composite script:', err);
+      alert(`Failed to generate script: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setGeneratingCompositeScript(false);
     }
@@ -1383,7 +1390,7 @@ export default function InsightsPage() {
       {/* Long-Form Composite Script Modal */}
       <Dialog open={showLongFormModal} onOpenChange={setShowLongFormModal}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          {compositeScript && (
+          {compositeScript && compositeScript.script_json && compositeScript.script_json.script && (
             <div>
               <DialogHeader>
                 <div className="flex items-center justify-between">
@@ -1533,7 +1540,7 @@ export default function InsightsPage() {
       {/* Short-Form Composite Script Modal */}
       <Dialog open={showShortFormModal} onOpenChange={setShowShortFormModal}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          {compositeScript && 'hook' in compositeScript.script_json.script && (
+          {compositeScript && compositeScript.script_json && compositeScript.script_json.script && 'hook' in compositeScript.script_json.script && (
             <div>
               <DialogHeader>
                 <div className="flex items-center justify-between">
