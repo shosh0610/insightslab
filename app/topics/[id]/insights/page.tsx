@@ -268,11 +268,8 @@ export default function InsightsPage() {
   };
 
   const handleGenerateCompositeScript = async (scriptType: 'long-form' | 'short-form') => {
-    // Short-form: 3-5 insights, Long-form: 3+ insights (no max)
-    if (selectedInsightIds.length < 3) {
-      return;
-    }
-    if (scriptType === 'short-form' && selectedInsightIds.length > 5) {
+    // No restrictions - let users experiment with any number of insights
+    if (selectedInsightIds.length === 0) {
       return;
     }
 
@@ -545,9 +542,7 @@ export default function InsightsPage() {
                         {selectedInsightIds.length} insight{selectedInsightIds.length !== 1 ? 's' : ''} selected
                       </p>
                       <p className="text-xs text-purple-700 dark:text-purple-300">
-                        {selectedInsightIds.length < 3 ? `Select ${3 - selectedInsightIds.length} more to generate scripts` :
-                         selectedInsightIds.length > 5 ? 'Long-form ready • Short-form max (5) exceeded' :
-                         'Ready to generate scripts'}
+                        Ready to generate scripts
                       </p>
                     </div>
                   </div>
@@ -562,7 +557,7 @@ export default function InsightsPage() {
                     </Button>
                     <Button
                       onClick={() => handleGenerateCompositeScript('short-form')}
-                      disabled={selectedInsightIds.length < 3 || selectedInsightIds.length > 5 || generatingCompositeScript}
+                      disabled={selectedInsightIds.length === 0 || generatingCompositeScript}
                       size="sm"
                       className="gap-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white border-0"
                     >
@@ -580,7 +575,7 @@ export default function InsightsPage() {
                     </Button>
                     <Button
                       onClick={() => handleGenerateCompositeScript('long-form')}
-                      disabled={selectedInsightIds.length < 3 || generatingCompositeScript}
+                      disabled={selectedInsightIds.length === 0 || generatingCompositeScript}
                       size="sm"
                       className="gap-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0"
                     >
@@ -767,9 +762,7 @@ export default function InsightsPage() {
                         {selectedInsightIds.length} insight{selectedInsightIds.length !== 1 ? 's' : ''} selected
                       </p>
                       <p className="text-xs text-purple-700 dark:text-purple-300">
-                        {selectedInsightIds.length < 3 ? `Select ${3 - selectedInsightIds.length} more to generate scripts` :
-                         selectedInsightIds.length > 5 ? 'Long-form ready • Short-form max (5) exceeded' :
-                         'Ready to generate scripts'}
+                        Ready to generate scripts
                       </p>
                     </div>
                   </div>
@@ -784,7 +777,7 @@ export default function InsightsPage() {
                     </Button>
                     <Button
                       onClick={() => handleGenerateCompositeScript('short-form')}
-                      disabled={selectedInsightIds.length < 3 || selectedInsightIds.length > 5 || generatingCompositeScript}
+                      disabled={selectedInsightIds.length === 0 || generatingCompositeScript}
                       size="sm"
                       className="gap-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white border-0"
                     >
@@ -802,7 +795,7 @@ export default function InsightsPage() {
                     </Button>
                     <Button
                       onClick={() => handleGenerateCompositeScript('long-form')}
-                      disabled={selectedInsightIds.length < 3 || generatingCompositeScript}
+                      disabled={selectedInsightIds.length === 0 || generatingCompositeScript}
                       size="sm"
                       className="gap-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0"
                     >
