@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { getTopic, getInsights, getDataPoints, getRawInsights, getRawDataPoints, getViralInsights, generateViralScript, type Topic, type Insight, type DataPoint } from '@/lib/api';
+import { getTopic, getInsights, getDataPoints, getRawInsights, getRawDataPoints, getViralInsights, generateViralScript, type Topic, type Insight, type DataPoint, type GeneratedScript } from '@/lib/api';
 import {
   ArrowLeft,
   Sparkles,
@@ -44,7 +44,7 @@ export default function InsightsPage() {
   const [insightView, setInsightView] = useState<'top' | 'all'>('top');
   const [dataPointView, setDataPointView] = useState<'top' | 'all'>('top');
   const [generatingScript, setGeneratingScript] = useState<number | null>(null);
-  const [generatedScript, setGeneratedScript] = useState<any>(null);
+  const [generatedScript, setGeneratedScript] = useState<GeneratedScript | null>(null);
   const [showScriptModal, setShowScriptModal] = useState(false);
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
 

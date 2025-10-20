@@ -63,6 +63,33 @@ export interface ViralBreakdown {
   shareability?: ViralDimensionScore;
 }
 
+export interface ScriptSection {
+  text: string;
+  word_count: number;
+  duration_seconds: number;
+}
+
+export interface ViralScript {
+  hook: ScriptSection;
+  setup: ScriptSection;
+  reveal: ScriptSection;
+  solution: ScriptSection;
+  closer: ScriptSection;
+}
+
+export interface GeneratedScript {
+  insight_id: number;
+  insight_text: string;
+  viral_score: number;
+  viral_tier: string;
+  script: {
+    script: ViralScript;
+    total_word_count: number;
+    total_duration: string;
+    full_script_text: string;
+  };
+}
+
 export interface Insight {
   id: number;
   topic_id?: number;
@@ -320,7 +347,7 @@ export async function getViralInsights(topicId: number): Promise<Insight[]> {
 /**
  * Generate a viral video script for a specific insight
  */
-export async function generateViralScript(topicId: number, insightId: number): Promise<any> {
+export async function generateViralScript(topicId: number, insightId: number): Promise<GeneratedScript> {
   const response = await fetch(`${API_URL}/api/topics/${topicId}/insights/${insightId}/viral-script`, {
     method: 'POST',
     headers: {
