@@ -96,6 +96,7 @@ export interface GeneratedScript {
 
 export interface SavedViralScript {
   id: number;
+  insight_id?: number;
   version: number;
   viral_score: number;
   viral_tier: string;

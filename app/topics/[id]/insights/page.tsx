@@ -212,12 +212,12 @@ export default function InsightsPage() {
 
   const handleVersionChange = (version: number) => {
     const selectedScript = availableVersions.find(v => v.version === version);
-    if (selectedScript) {
+    if (selectedScript && generatedScript) {
       setSelectedVersion(version);
       setGeneratedScript({
         id: selectedScript.id,
-        insight_id: selectedScript.insight_id,
-        insight_text: generatedScript?.insight_text || '',
+        insight_id: generatedScript.insight_id,
+        insight_text: generatedScript.insight_text,
         viral_score: selectedScript.viral_score,
         viral_tier: selectedScript.viral_tier,
         version: selectedScript.version,
