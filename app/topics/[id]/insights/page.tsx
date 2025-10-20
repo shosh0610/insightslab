@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getTopic, getInsights, getDataPoints, getRawInsights, getRawDataPoints, getViralInsights, generateViralScript, getViralScripts, getLatestViralScript, type Topic, type Insight, type DataPoint, type GeneratedScript } from '@/lib/api';
+import { getTopic, getInsights, getDataPoints, getRawInsights, getRawDataPoints, getViralInsights, generateViralScript, getViralScripts, getLatestViralScript, type Topic, type Insight, type DataPoint, type GeneratedScript, type SavedViralScript } from '@/lib/api';
 import {
   ArrowLeft,
   Sparkles,
@@ -49,7 +49,7 @@ export default function InsightsPage() {
   const [showScriptModal, setShowScriptModal] = useState(false);
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
   const [scriptCounts, setScriptCounts] = useState<Record<number, number>>({});
-  const [availableVersions, setAvailableVersions] = useState<any[]>([]);
+  const [availableVersions, setAvailableVersions] = useState<SavedViralScript[]>([]);
   const [selectedVersion, setSelectedVersion] = useState<number>(1);
   const [loadingScripts, setLoadingScripts] = useState(false);
 

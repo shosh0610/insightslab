@@ -90,6 +90,21 @@ export interface GeneratedScript {
   };
 }
 
+export interface SavedViralScript {
+  id: number;
+  version: number;
+  viral_score: number;
+  viral_tier: string;
+  created_at: string;
+  full_script_text: string;
+  script_json: {
+    script: ViralScript;
+    total_word_count: number;
+    total_duration: string;
+    full_script_text: string;
+  };
+}
+
 export interface Insight {
   id: number;
   topic_id?: number;
@@ -366,7 +381,7 @@ export async function generateViralScript(topicId: number, insightId: number): P
 /**
  * Get all saved viral script versions for an insight
  */
-export async function getViralScripts(topicId: number, insightId: number): Promise<any[]> {
+export async function getViralScripts(topicId: number, insightId: number): Promise<SavedViralScript[]> {
   const response = await fetch(`${API_URL}/api/topics/${topicId}/insights/${insightId}/viral-scripts`);
 
   if (!response.ok) {
