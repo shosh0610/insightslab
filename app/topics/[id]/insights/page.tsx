@@ -616,7 +616,6 @@ export default function InsightsPage() {
                           <Checkbox
                             checked={selectedInsightIds.includes(insight.id)}
                             onCheckedChange={() => toggleInsightSelection(insight.id)}
-                            disabled={!selectedInsightIds.includes(insight.id) && selectedInsightIds.length >= 5}
                             className="mt-1"
                           />
                         </div>
@@ -839,7 +838,6 @@ export default function InsightsPage() {
                           <Checkbox
                             checked={selectedInsightIds.includes(insight.id)}
                             onCheckedChange={() => toggleInsightSelection(insight.id)}
-                            disabled={!selectedInsightIds.includes(insight.id) && selectedInsightIds.length >= 5}
                             className="mt-1"
                           />
                         </div>
