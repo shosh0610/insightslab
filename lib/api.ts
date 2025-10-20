@@ -318,6 +318,24 @@ export async function getViralInsights(topicId: number): Promise<Insight[]> {
 }
 
 /**
+ * Generate a viral video script for a specific insight
+ */
+export async function generateViralScript(topicId: number, insightId: number): Promise<any> {
+  const response = await fetch(`${API_URL}/api/topics/${topicId}/insights/${insightId}/viral-script`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to generate script: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+/**
  * Get data points for a topic
  */
 export async function getDataPoints(topicId: number): Promise<DataPoint[]> {

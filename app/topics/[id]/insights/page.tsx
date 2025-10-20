@@ -12,7 +12,8 @@ import { DataPointChart } from '@/components/ui/data-point-chart';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { getTopic, getInsights, getDataPoints, getRawInsights, getRawDataPoints, getViralInsights, type Topic, type Insight, type DataPoint } from '@/lib/api';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { getTopic, getInsights, getDataPoints, getRawInsights, getRawDataPoints, getViralInsights, generateViralScript, type Topic, type Insight, type DataPoint } from '@/lib/api';
 import {
   ArrowLeft,
   Sparkles,
@@ -21,7 +22,10 @@ import {
   Search,
   Download,
   MessageSquare,
-  Flame
+  Flame,
+  Video,
+  Copy,
+  Check
 } from 'lucide-react';
 
 export default function InsightsPage() {
@@ -39,6 +43,10 @@ export default function InsightsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [insightView, setInsightView] = useState<'top' | 'all'>('top');
   const [dataPointView, setDataPointView] = useState<'top' | 'all'>('top');
+  const [generatingScript, setGeneratingScript] = useState<number | null>(null);
+  const [generatedScript, setGeneratedScript] = useState<any>(null);
+  const [showScriptModal, setShowScriptModal] = useState(false);
+  const [copiedSection, setCopiedSection] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -123,6 +131,34 @@ export default function InsightsPage() {
         {config.emoji} {config.label}
       </Badge>
     );
+  };
+
+  const handleGenerateScript = async (insightId: number) => {
+    setGeneratingScript(insightId);
+    try {
+      const script = await generateViralScript(topicId, insightId);
+      setGeneratedScript(script);
+      setShowScriptModal(true);
+    } catch (err) {
+      console.error('Failed to generate script:', err);
+      alert('Failed to generate script. Please try again.');
+    } finally {
+      setGeneratingScript(null);
+    }
+  };
+
+  const handleCopySection = (text: string, sectionName: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedSection(sectionName);
+    setTimeout(() => setCopiedSection(null), 2000);
+  };
+
+  const handleCopyFullScript = () => {
+    if (generatedScript?.script?.full_script_text) {
+      navigator.clipboard.writeText(generatedScript.script.full_script_text);
+      setCopiedSection('full');
+      setTimeout(() => setCopiedSection(null), 2000);
+    }
   };
 
   const exportToText = () => {
@@ -535,6 +571,24 @@ export default function InsightsPage() {
                             {insightText}
                           </CardTitle>
                         </div>
+                        <Button
+                          onClick={() => handleGenerateScript(insight.id)}
+                          disabled={generatingScript === insight.id}
+                          className="gap-2 shrink-0"
+                          variant="outline"
+                        >
+                          {generatingScript === insight.id ? (
+                            <>
+                              <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                              Generating...
+                            </>
+                          ) : (
+                            <>
+                              <Video className="h-4 w-4" />
+                              Generate Script
+                            </>
+                          )}
+                        </Button>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -805,6 +859,186 @@ export default function InsightsPage() {
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* Viral Script Modal */}
+      <Dialog open={showScriptModal} onOpenChange={setShowScriptModal}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Video className="h-5 w-5" />
+              Viral Video Script
+            </DialogTitle>
+            <DialogDescription>
+              {generatedScript?.viral_tier && (
+                <div className="flex items-center gap-2 mt-2">
+                  {getViralTierBadge(generatedScript.viral_tier)}
+                  <Badge variant="secondary">{generatedScript.viral_score}/100</Badge>
+                  <span className="text-sm text-muted-foreground">
+                    {generatedScript.script?.total_duration} • {generatedScript.script?.total_word_count} words
+                  </span>
+                </div>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {generatedScript?.script && (
+            <div className="space-y-4 mt-4">
+              {/* Full Script Copy Button */}
+              <div className="flex items-center justify-between pb-2 border-b">
+                <p className="text-sm font-semibold">Full Script</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopyFullScript}
+                  className="gap-2"
+                >
+                  {copiedSection === 'full' ? (
+                    <>
+                      <Check className="h-4 w-4" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4" />
+                      Copy All
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* HOOK */}
+              {generatedScript.script.script?.hook && (
+                <div className="bg-purple-50 dark:bg-purple-950/20 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-purple-700 dark:text-purple-400">
+                        🎣 HOOK
+                      </p>
+                      <Badge variant="outline" className="text-xs">
+                        {generatedScript.script.script.hook.duration_seconds}s • {generatedScript.script.script.hook.word_count} words
+                      </Badge>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleCopySection(generatedScript.script.script.hook.text, 'hook')}
+                    >
+                      {copiedSection === 'hook' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <p className="text-sm text-slate-700 dark:text-slate-300">
+                    {generatedScript.script.script.hook.text}
+                  </p>
+                </div>
+              )}
+
+              {/* SETUP */}
+              {generatedScript.script.script?.setup && (
+                <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-blue-700 dark:text-blue-400">
+                        🎬 SETUP
+                      </p>
+                      <Badge variant="outline" className="text-xs">
+                        {generatedScript.script.script.setup.duration_seconds}s • {generatedScript.script.script.setup.word_count} words
+                      </Badge>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleCopySection(generatedScript.script.script.setup.text, 'setup')}
+                    >
+                      {copiedSection === 'setup' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <p className="text-sm text-slate-700 dark:text-slate-300">
+                    {generatedScript.script.script.setup.text}
+                  </p>
+                </div>
+              )}
+
+              {/* REVEAL */}
+              {generatedScript.script.script?.reveal && (
+                <div className="bg-amber-50 dark:bg-amber-950/20 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+                        💡 REVEAL
+                      </p>
+                      <Badge variant="outline" className="text-xs">
+                        {generatedScript.script.script.reveal.duration_seconds}s • {generatedScript.script.script.reveal.word_count} words
+                      </Badge>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleCopySection(generatedScript.script.script.reveal.text, 'reveal')}
+                    >
+                      {copiedSection === 'reveal' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <p className="text-sm text-slate-700 dark:text-slate-300">
+                    {generatedScript.script.script.reveal.text}
+                  </p>
+                </div>
+              )}
+
+              {/* SOLUTION */}
+              {generatedScript.script.script?.solution && (
+                <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-green-700 dark:text-green-400">
+                        ✅ SOLUTION
+                      </p>
+                      <Badge variant="outline" className="text-xs">
+                        {generatedScript.script.script.solution.duration_seconds}s • {generatedScript.script.script.solution.word_count} words
+                      </Badge>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleCopySection(generatedScript.script.script.solution.text, 'solution')}
+                    >
+                      {copiedSection === 'solution' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <p className="text-sm text-slate-700 dark:text-slate-300">
+                    {generatedScript.script.script.solution.text}
+                  </p>
+                </div>
+              )}
+
+              {/* CLOSER */}
+              {generatedScript.script.script?.closer && (
+                <div className="bg-pink-50 dark:bg-pink-950/20 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-pink-700 dark:text-pink-400">
+                        🎤 CLOSER
+                      </p>
+                      <Badge variant="outline" className="text-xs">
+                        {generatedScript.script.script.closer.duration_seconds}s • {generatedScript.script.script.closer.word_count} words
+                      </Badge>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleCopySection(generatedScript.script.script.closer.text, 'closer')}
+                    >
+                      {copiedSection === 'closer' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <p className="text-sm text-slate-700 dark:text-slate-300">
+                    {generatedScript.script.script.closer.text}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
