@@ -78,10 +78,14 @@ export interface ViralScript {
 }
 
 export interface GeneratedScript {
+  id?: number;
   insight_id: number;
   insight_text: string;
   viral_score: number;
   viral_tier: string;
+  version?: number;
+  total_versions?: number;
+  created_at?: string;
   script: {
     script: ViralScript;
     total_word_count: number;
