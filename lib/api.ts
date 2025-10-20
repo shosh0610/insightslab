@@ -47,6 +47,22 @@ export interface SupportingDataPoint {
   context: string;
 }
 
+export interface ViralDimensionScore {
+  score: number;
+  max: number;
+  reasoning: string;
+}
+
+export interface ViralBreakdown {
+  hook_strength?: ViralDimensionScore;
+  emotional_resonance?: ViralDimensionScore;
+  specificity?: ViralDimensionScore;
+  counterintuitiveness?: ViralDimensionScore;
+  universal_relatability?: ViralDimensionScore;
+  story_potential?: ViralDimensionScore;
+  shareability?: ViralDimensionScore;
+}
+
 export interface Insight {
   id: number;
   topic_id?: number;
@@ -60,6 +76,9 @@ export interface Insight {
   supporting_data?: SupportingDataPoint[];  // New API format - linked data points
   relevance_score?: number;
   relevance_category?: string;
+  viral_score?: number;  // Viral potential score (0-100)
+  viral_breakdown?: ViralBreakdown;  // Breakdown of 7 scoring dimensions
+  viral_tier?: string;  // A, B, C, D, or F
   insight_type?: string;
   created_at?: string;
 }
@@ -280,6 +299,19 @@ export async function getInsights(topicId: number): Promise<Insight[]> {
 
   if (!response.ok) {
     throw new Error(`Failed to get insights: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get insights sorted by viral potential score
+ */
+export async function getViralInsights(topicId: number): Promise<Insight[]> {
+  const response = await fetch(`${API_URL}/api/topics/${topicId}/insights/viral/`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to get viral insights: ${response.statusText}`);
   }
 
   return response.json();
