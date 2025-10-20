@@ -110,6 +110,45 @@ export interface SavedViralScript {
   };
 }
 
+// Composite Script Interfaces (Multi-Insight Scripts)
+export interface LongFormScriptChapter {
+  chapter_number: number;
+  chapter_title: string;
+  intro: ScriptSection;
+  setup: ScriptSection;
+  reveal: ScriptSection;
+  example: ScriptSection;
+  mini_solution: ScriptSection;
+  transition: ScriptSection;
+}
+
+export interface LongFormScript {
+  introduction: ScriptSection;
+  chapters: LongFormScriptChapter[];
+  synthesis: ScriptSection;
+  action_plan: ScriptSection;
+  closer: ScriptSection;
+}
+
+export interface CompositeScriptJSON {
+  script: LongFormScript | ViralScript;
+  total_word_count: number;
+  total_duration: string;
+  full_script_text: string;
+}
+
+export interface CompositeScript {
+  id: number;
+  insight_ids: number[];
+  script_type: 'long-form' | 'short-form';
+  version: number;
+  total_versions?: number;
+  total_insights: number;
+  created_at: string;
+  full_script_text: string;
+  script_json: CompositeScriptJSON;
+}
+
 export interface Insight {
   id: number;
   topic_id?: number;
@@ -492,6 +531,71 @@ export async function generateScript(params: {
 
   if (!response.ok) {
     throw new Error(`Failed to generate script: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Generate a composite script from multiple insights
+ * Supports both long-form (8-15 min) and short-form (1:30-1:45) scripts
+ * Saves to database with version tracking
+ */
+export async function generateCompositeScript(
+  topicId: number,
+  insightIds: number[],
+  scriptType: 'long-form' | 'short-form'
+): Promise<CompositeScript> {
+  const response = await fetch(`${API_URL}/api/topics/${topicId}/insights/composite-script`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      insight_ids: insightIds,
+      script_type: scriptType,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to generate composite script: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return {
+    id: data.id,
+    insight_ids: data.insight_ids,
+    script_type: data.script_type,
+    version: data.version,
+    total_versions: data.total_versions,
+    total_insights: data.insight_ids.length,
+    created_at: new Date().toISOString(),
+    full_script_text: data.script.full_script_text,
+    script_json: data.script,
+  };
+}
+
+/**
+ * Get all composite scripts for a topic
+ */
+export async function getCompositeScripts(topicId: number): Promise<CompositeScript[]> {
+  const response = await fetch(`${API_URL}/api/topics/${topicId}/insights/composite-scripts`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to get composite scripts: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get a specific composite script by ID
+ */
+export async function getCompositeScript(topicId: number, scriptId: number): Promise<CompositeScript> {
+  const response = await fetch(`${API_URL}/api/topics/${topicId}/insights/composite-scripts/${scriptId}`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to get composite script: ${response.statusText}`);
   }
 
   return response.json();

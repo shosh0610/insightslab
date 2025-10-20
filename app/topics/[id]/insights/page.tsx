@@ -11,10 +11,12 @@ import { AnimatedCounter } from '@/components/ui/animated-counter';
 import { DataPointChart } from '@/components/ui/data-point-chart';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getTopic, getInsights, getDataPoints, getRawInsights, getRawDataPoints, getViralInsights, generateViralScript, getViralScripts, getLatestViralScript, type Topic, type Insight, type DataPoint, type GeneratedScript, type SavedViralScript } from '@/lib/api';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { getTopic, getInsights, getDataPoints, getRawInsights, getRawDataPoints, getViralInsights, generateViralScript, getViralScripts, getLatestViralScript, generateCompositeScript, getCompositeScripts, type Topic, type Insight, type DataPoint, type GeneratedScript, type SavedViralScript, type CompositeScript } from '@/lib/api';
 import {
   ArrowLeft,
   Sparkles,
@@ -52,6 +54,13 @@ export default function InsightsPage() {
   const [availableVersions, setAvailableVersions] = useState<SavedViralScript[]>([]);
   const [selectedVersion, setSelectedVersion] = useState<number>(1);
   const [loadingScripts, setLoadingScripts] = useState(false);
+
+  // Multi-insight selection state
+  const [selectedInsightIds, setSelectedInsightIds] = useState<number[]>([]);
+  const [generatingCompositeScript, setGeneratingCompositeScript] = useState(false);
+  const [compositeScript, setCompositeScript] = useState<CompositeScript | null>(null);
+  const [showLongFormModal, setShowLongFormModal] = useState(false);
+  const [showShortFormModal, setShowShortFormModal] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -239,6 +248,46 @@ export default function InsightsPage() {
       navigator.clipboard.writeText(generatedScript.script.full_script_text);
       setCopiedSection('full');
       setTimeout(() => setCopiedSection(null), 2000);
+    }
+  };
+
+  // Multi-insight selection handlers
+  const toggleInsightSelection = (insightId: number) => {
+    setSelectedInsightIds(prev => {
+      if (prev.includes(insightId)) {
+        return prev.filter(id => id !== insightId);
+      } else {
+        if (prev.length >= 5) {
+          return prev; // Max 5 insights
+        }
+        return [...prev, insightId];
+      }
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectedInsightIds([]);
+  };
+
+  const handleGenerateCompositeScript = async (scriptType: 'long-form' | 'short-form') => {
+    if (selectedInsightIds.length < 3 || selectedInsightIds.length > 5) {
+      return;
+    }
+
+    setGeneratingCompositeScript(true);
+    try {
+      const script = await generateCompositeScript(topicId, selectedInsightIds, scriptType);
+      setCompositeScript(script);
+
+      if (scriptType === 'long-form') {
+        setShowLongFormModal(true);
+      } else {
+        setShowShortFormModal(true);
+      }
+    } catch (err) {
+      console.error('Failed to generate composite script:', err);
+    } finally {
+      setGeneratingCompositeScript(false);
     }
   };
 
@@ -477,6 +526,79 @@ export default function InsightsPage() {
               )}
             </div>
 
+            {/* Multi-Insight Script Generation */}
+            {selectedInsightIds.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 border border-purple-200 dark:border-purple-800 rounded-lg p-4 mb-4"
+              >
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-white font-bold text-sm">
+                      {selectedInsightIds.length}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-purple-900 dark:text-purple-100">
+                        {selectedInsightIds.length} insight{selectedInsightIds.length !== 1 ? 's' : ''} selected
+                      </p>
+                      <p className="text-xs text-purple-700 dark:text-purple-300">
+                        {selectedInsightIds.length < 3 ? `Select ${3 - selectedInsightIds.length} more to generate scripts` :
+                         selectedInsightIds.length === 5 ? 'Maximum selection reached' :
+                         'Ready to generate scripts'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={clearSelection}
+                      className="gap-2"
+                    >
+                      Clear Selection
+                    </Button>
+                    <Button
+                      onClick={() => handleGenerateCompositeScript('short-form')}
+                      disabled={selectedInsightIds.length < 3 || selectedInsightIds.length > 5 || generatingCompositeScript}
+                      size="sm"
+                      className="gap-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white border-0"
+                    >
+                      {generatingCompositeScript ? (
+                        <>
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Video className="h-4 w-4" />
+                          Short-Form (1:30-1:45)
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      onClick={() => handleGenerateCompositeScript('long-form')}
+                      disabled={selectedInsightIds.length < 3 || selectedInsightIds.length > 5 || generatingCompositeScript}
+                      size="sm"
+                      className="gap-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0"
+                    >
+                      {generatingCompositeScript ? (
+                        <>
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4" />
+                          Long-Form (8-15 min)
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
             {displayedInsights.length === 0 ? (
               <Card>
                 <CardContent className="pt-6 text-center text-muted-foreground">
@@ -493,6 +615,14 @@ export default function InsightsPage() {
                   <AnimatedCard key={insight.id} delay={index * 0.05} className="hover:shadow-lg transition-shadow">
                     <CardHeader>
                       <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <Checkbox
+                            checked={selectedInsightIds.includes(insight.id)}
+                            onCheckedChange={() => toggleInsightSelection(insight.id)}
+                            disabled={!selectedInsightIds.includes(insight.id) && selectedInsightIds.length >= 5}
+                            className="mt-1"
+                          />
+                        </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
                             <Badge variant="outline" className="font-mono">
@@ -618,6 +748,79 @@ export default function InsightsPage() {
           </TabsContent>
 
           <TabsContent value="viral" className="space-y-4">
+            {/* Multi-Insight Script Generation */}
+            {selectedInsightIds.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 border border-purple-200 dark:border-purple-800 rounded-lg p-4 mb-4"
+              >
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-white font-bold text-sm">
+                      {selectedInsightIds.length}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-purple-900 dark:text-purple-100">
+                        {selectedInsightIds.length} insight{selectedInsightIds.length !== 1 ? 's' : ''} selected
+                      </p>
+                      <p className="text-xs text-purple-700 dark:text-purple-300">
+                        {selectedInsightIds.length < 3 ? `Select ${3 - selectedInsightIds.length} more to generate scripts` :
+                         selectedInsightIds.length === 5 ? 'Maximum selection reached' :
+                         'Ready to generate scripts'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={clearSelection}
+                      className="gap-2"
+                    >
+                      Clear Selection
+                    </Button>
+                    <Button
+                      onClick={() => handleGenerateCompositeScript('short-form')}
+                      disabled={selectedInsightIds.length < 3 || selectedInsightIds.length > 5 || generatingCompositeScript}
+                      size="sm"
+                      className="gap-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white border-0"
+                    >
+                      {generatingCompositeScript ? (
+                        <>
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Video className="h-4 w-4" />
+                          Short-Form (1:30-1:45)
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      onClick={() => handleGenerateCompositeScript('long-form')}
+                      disabled={selectedInsightIds.length < 3 || selectedInsightIds.length > 5 || generatingCompositeScript}
+                      size="sm"
+                      className="gap-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0"
+                    >
+                      {generatingCompositeScript ? (
+                        <>
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4" />
+                          Long-Form (8-15 min)
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
             {viralInsights.length === 0 ? (
               <Card>
                 <CardContent className="pt-6 text-center text-muted-foreground">
@@ -637,6 +840,14 @@ export default function InsightsPage() {
                   <AnimatedCard key={insight.id} delay={index * 0.05} className="hover:shadow-lg transition-shadow">
                     <CardHeader>
                       <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <Checkbox
+                            checked={selectedInsightIds.includes(insight.id)}
+                            onCheckedChange={() => toggleInsightSelection(insight.id)}
+                            disabled={!selectedInsightIds.includes(insight.id) && selectedInsightIds.length >= 5}
+                            className="mt-1"
+                          />
+                        </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2 flex-wrap">
                             <Badge variant="outline" className="font-mono">
@@ -1171,6 +1382,264 @@ export default function InsightsPage() {
                   </p>
                 </div>
               )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Long-Form Composite Script Modal */}
+      <Dialog open={showLongFormModal} onOpenChange={setShowLongFormModal}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {compositeScript && (
+            <div>
+              <DialogHeader>
+                <div className="flex items-center justify-between">
+                  <DialogTitle className="text-2xl">Long-Form Script (8-15 min)</DialogTitle>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="gap-1">
+                      <Sparkles className="h-3 w-3" />
+                      {compositeScript.total_insights} insights
+                    </Badge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        navigator.clipboard.writeText(compositeScript.full_script_text);
+                        setCopiedSection('composite-full');
+                        setTimeout(() => setCopiedSection(null), 2000);
+                      }}
+                      className="gap-2"
+                    >
+                      {copiedSection === 'composite-full' ? (
+                        <>
+                          <Check className="h-4 w-4" />
+                          Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-4 w-4" />
+                          Copy All
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+                <DialogDescription>
+                  {compositeScript.script_json.total_word_count} words • {compositeScript.script_json.total_duration}
+                </DialogDescription>
+              </DialogHeader>
+
+              <Accordion type="multiple" className="w-full mt-6">
+                {/* Introduction */}
+                {'introduction' in compositeScript.script_json.script && (
+                  <AccordionItem value="introduction">
+                    <AccordionTrigger className="text-lg font-semibold text-purple-600 dark:text-purple-400">
+                      📺 INTRODUCTION ({compositeScript.script_json.script.introduction.word_count} words • {compositeScript.script_json.script.introduction.duration_seconds}s)
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="bg-purple-50 dark:bg-purple-950/20 rounded-lg p-4">
+                        <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line">
+                          {compositeScript.script_json.script.introduction.text}
+                        </p>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                )}
+
+                {/* Chapters */}
+                {'chapters' in compositeScript.script_json.script &&
+                  compositeScript.script_json.script.chapters.map((chapter, idx) => (
+                    <AccordionItem key={idx} value={`chapter-${idx}`}>
+                      <AccordionTrigger className="text-lg font-semibold text-blue-600 dark:text-blue-400">
+                        📖 Chapter {chapter.chapter_number}: {chapter.chapter_title}
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-3">
+                          <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-3">
+                            <p className="text-xs font-semibold text-blue-700 dark:text-blue-400 mb-1">INTRO ({chapter.intro.duration_seconds}s)</p>
+                            <p className="text-sm text-slate-700 dark:text-slate-300">{chapter.intro.text}</p>
+                          </div>
+                          <div className="bg-cyan-50 dark:bg-cyan-950/20 rounded-lg p-3">
+                            <p className="text-xs font-semibold text-cyan-700 dark:text-cyan-400 mb-1">SETUP ({chapter.setup.duration_seconds}s)</p>
+                            <p className="text-sm text-slate-700 dark:text-slate-300">{chapter.setup.text}</p>
+                          </div>
+                          <div className="bg-amber-50 dark:bg-amber-950/20 rounded-lg p-3">
+                            <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-1">REVEAL ({chapter.reveal.duration_seconds}s)</p>
+                            <p className="text-sm text-slate-700 dark:text-slate-300">{chapter.reveal.text}</p>
+                          </div>
+                          <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-3">
+                            <p className="text-xs font-semibold text-green-700 dark:text-green-400 mb-1">EXAMPLE ({chapter.example.duration_seconds}s)</p>
+                            <p className="text-sm text-slate-700 dark:text-slate-300">{chapter.example.text}</p>
+                          </div>
+                          <div className="bg-emerald-50 dark:bg-emerald-950/20 rounded-lg p-3">
+                            <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-1">MINI-SOLUTION ({chapter.mini_solution.duration_seconds}s)</p>
+                            <p className="text-sm text-slate-700 dark:text-slate-300">{chapter.mini_solution.text}</p>
+                          </div>
+                          <div className="bg-slate-50 dark:bg-slate-950/20 rounded-lg p-3">
+                            <p className="text-xs font-semibold text-slate-700 dark:text-slate-400 mb-1">TRANSITION ({chapter.transition.duration_seconds}s)</p>
+                            <p className="text-sm text-slate-700 dark:text-slate-300">{chapter.transition.text}</p>
+                          </div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+
+                {/* Synthesis */}
+                {'synthesis' in compositeScript.script_json.script && (
+                  <AccordionItem value="synthesis">
+                    <AccordionTrigger className="text-lg font-semibold text-indigo-600 dark:text-indigo-400">
+                      🔗 SYNTHESIS ({compositeScript.script_json.script.synthesis.word_count} words • {compositeScript.script_json.script.synthesis.duration_seconds}s)
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="bg-indigo-50 dark:bg-indigo-950/20 rounded-lg p-4">
+                        <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line">
+                          {compositeScript.script_json.script.synthesis.text}
+                        </p>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                )}
+
+                {/* Action Plan */}
+                {'action_plan' in compositeScript.script_json.script && (
+                  <AccordionItem value="action">
+                    <AccordionTrigger className="text-lg font-semibold text-green-600 dark:text-green-400">
+                      ✅ ACTION PLAN ({compositeScript.script_json.script.action_plan.word_count} words • {compositeScript.script_json.script.action_plan.duration_seconds}s)
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-4">
+                        <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line">
+                          {compositeScript.script_json.script.action_plan.text}
+                        </p>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                )}
+
+                {/* Closer */}
+                {'closer' in compositeScript.script_json.script && (
+                  <AccordionItem value="closer">
+                    <AccordionTrigger className="text-lg font-semibold text-pink-600 dark:text-pink-400">
+                      🎤 CLOSER ({compositeScript.script_json.script.closer.word_count} words • {compositeScript.script_json.script.closer.duration_seconds}s)
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="bg-pink-50 dark:bg-pink-950/20 rounded-lg p-4">
+                        <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line">
+                          {compositeScript.script_json.script.closer.text}
+                        </p>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                )}
+              </Accordion>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Short-Form Composite Script Modal */}
+      <Dialog open={showShortFormModal} onOpenChange={setShowShortFormModal}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          {compositeScript && 'hook' in compositeScript.script_json.script && (
+            <div>
+              <DialogHeader>
+                <div className="flex items-center justify-between">
+                  <DialogTitle className="text-2xl">Short-Form Script (1:30-1:45)</DialogTitle>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="gap-1">
+                      <Video className="h-3 w-3" />
+                      {compositeScript.total_insights} insights
+                    </Badge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        navigator.clipboard.writeText(compositeScript.full_script_text);
+                        setCopiedSection('composite-short-full');
+                        setTimeout(() => setCopiedSection(null), 2000);
+                      }}
+                      className="gap-2"
+                    >
+                      {copiedSection === 'composite-short-full' ? (
+                        <>
+                          <Check className="h-4 w-4" />
+                          Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-4 w-4" />
+                          Copy All
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+                <DialogDescription>
+                  {compositeScript.script_json.total_word_count} words • {compositeScript.script_json.total_duration}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 mt-6">
+                {/* Hook */}
+                <div className="bg-purple-50 dark:bg-purple-950/20 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-semibold text-purple-700 dark:text-purple-400">
+                      🪝 HOOK ({compositeScript.script_json.script.hook.word_count} words • {compositeScript.script_json.script.hook.duration_seconds}s)
+                    </p>
+                  </div>
+                  <p className="text-sm text-slate-700 dark:text-slate-300">
+                    {compositeScript.script_json.script.hook.text}
+                  </p>
+                </div>
+
+                {/* Setup */}
+                <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-semibold text-blue-700 dark:text-blue-400">
+                      🎬 SETUP ({compositeScript.script_json.script.setup.word_count} words • {compositeScript.script_json.script.setup.duration_seconds}s)
+                    </p>
+                  </div>
+                  <p className="text-sm text-slate-700 dark:text-slate-300">
+                    {compositeScript.script_json.script.setup.text}
+                  </p>
+                </div>
+
+                {/* Reveal */}
+                <div className="bg-amber-50 dark:bg-amber-950/20 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+                      💡 REVEAL ({compositeScript.script_json.script.reveal.word_count} words • {compositeScript.script_json.script.reveal.duration_seconds}s)
+                    </p>
+                  </div>
+                  <p className="text-sm text-slate-700 dark:text-slate-300">
+                    {compositeScript.script_json.script.reveal.text}
+                  </p>
+                </div>
+
+                {/* Solution */}
+                <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-semibold text-green-700 dark:text-green-400">
+                      ✅ SOLUTION ({compositeScript.script_json.script.solution.word_count} words • {compositeScript.script_json.script.solution.duration_seconds}s)
+                    </p>
+                  </div>
+                  <p className="text-sm text-slate-700 dark:text-slate-300">
+                    {compositeScript.script_json.script.solution.text}
+                  </p>
+                </div>
+
+                {/* Closer */}
+                <div className="bg-pink-50 dark:bg-pink-950/20 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-semibold text-pink-700 dark:text-pink-400">
+                      🎤 CLOSER ({compositeScript.script_json.script.closer.word_count} words • {compositeScript.script_json.script.closer.duration_seconds}s)
+                    </p>
+                  </div>
+                  <p className="text-sm text-slate-700 dark:text-slate-300">
+                    {compositeScript.script_json.script.closer.text}
+                  </p>
+                </div>
+              </div>
             </div>
           )}
         </DialogContent>
