@@ -187,7 +187,7 @@ export default function InsightsPage() {
             total_versions: existingScripts.length,
             created_at: existingScripts[0].created_at,
             script: existingScripts[0].script_json
-          });
+          } as GeneratedScript);
           setShowScriptModal(true);
           return;
         }
