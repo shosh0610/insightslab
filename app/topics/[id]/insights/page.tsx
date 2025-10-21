@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { getTopic, getInsights, getDataPoints, getRawInsights, getRawDataPoints, getViralInsights, generateViralScript, getViralScripts, getLatestViralScript, generateCompositeScript, getCompositeScripts, type Topic, type Insight, type DataPoint, type GeneratedScript, type SavedViralScript, type CompositeScript } from '@/lib/api';
+import { getTopic, getInsights, getDataPoints, getRawInsights, getRawDataPoints, getViralInsights, generateViralScript, getViralScripts, generateCompositeScript, getCompositeScripts, type Topic, type Insight, type DataPoint, type GeneratedScript, type SavedViralScript, type CompositeScript } from '@/lib/api';
 import {
   ArrowLeft,
   Sparkles,
@@ -53,7 +53,6 @@ export default function InsightsPage() {
   const [scriptCounts, setScriptCounts] = useState<Record<number, number>>({});
   const [availableVersions, setAvailableVersions] = useState<SavedViralScript[]>([]);
   const [selectedVersion, setSelectedVersion] = useState<number>(1);
-  const [loadingScripts, setLoadingScripts] = useState(false);
 
   // Multi-insight selection state
   const [selectedInsightIds, setSelectedInsightIds] = useState<number[]>([]);
@@ -61,6 +60,11 @@ export default function InsightsPage() {
   const [compositeScript, setCompositeScript] = useState<CompositeScript | null>(null);
   const [showLongFormModal, setShowLongFormModal] = useState(false);
   const [showShortFormModal, setShowShortFormModal] = useState(false);
+
+  // Scripts tab state
+  const [allViralScripts, setAllViralScripts] = useState<SavedViralScript[]>([]);
+  const [allCompositeScripts, setAllCompositeScripts] = useState<CompositeScript[]>([]);
+  const [loadingScriptsTab, setLoadingScriptsTab] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -163,7 +167,6 @@ export default function InsightsPage() {
 
   const handleGenerateScript = async (insightId: number, forceNew = false) => {
     setGeneratingScript(insightId);
-    setLoadingScripts(true);
 
     try {
       // Check if scripts already exist (unless forcing new)
@@ -211,7 +214,6 @@ export default function InsightsPage() {
       alert('Failed to generate script. Please try again.');
     } finally {
       setGeneratingScript(null);
-      setLoadingScripts(false);
     }
   };
 
@@ -265,6 +267,33 @@ export default function InsightsPage() {
 
   const clearSelection = () => {
     setSelectedInsightIds([]);
+  };
+
+  const loadAllScripts = async () => {
+    setLoadingScriptsTab(true);
+    try {
+      // Fetch all composite scripts for this topic
+      const compositeScripts = await getCompositeScripts(topicId);
+      setAllCompositeScripts(compositeScripts);
+
+      // Fetch all viral scripts for insights in this topic
+      const viralScriptsPromises = viralInsights.map(async (insight) => {
+        try {
+          const scripts = await getViralScripts(topicId, insight.id);
+          return scripts.map(s => ({ ...s, insight_id: insight.id }));
+        } catch {
+          return [];
+        }
+      });
+
+      const viralScriptsArrays = await Promise.all(viralScriptsPromises);
+      const allViral = viralScriptsArrays.flat();
+      setAllViralScripts(allViral);
+    } catch (err) {
+      console.error('Failed to load scripts:', err);
+    } finally {
+      setLoadingScriptsTab(false);
+    }
   };
 
   const handleGenerateCompositeScript = async (scriptType: 'long-form' | 'short-form') => {
@@ -390,8 +419,8 @@ export default function InsightsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
       {/* Header */}
-      <header className="border-b bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
+      <header className="border-b bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-blue-500/10 dark:from-purple-500/5 dark:via-pink-500/5 dark:to-blue-500/5 backdrop-blur-sm sticky top-0 z-10">
+        <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link href="/">
@@ -401,20 +430,38 @@ export default function InsightsPage() {
                 </Button>
               </Link>
               <div>
-                <h1 className="text-2xl font-bold">{topic?.name}</h1>
+                <div className="flex items-center gap-3 mb-1">
+                  <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                    {topic?.name}
+                  </h1>
+                  <motion.div
+                    animate={{ rotate: [0, 15, -15, 0], scale: [1, 1.1, 1.1, 1] }}
+                    transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                  >
+                    <Sparkles className="h-6 w-6 text-purple-500" />
+                  </motion.div>
+                </div>
                 <p className="text-sm text-muted-foreground">
-                  {insights.length} insights • {dataPoints.length} data points
+                  AI-powered analysis • {insights.length} insights • {dataPoints.length} data points
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={exportToText} className="gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportToText}
+                className="gap-2 border-purple-200 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-950/20"
+              >
                 <Download className="h-4 w-4" />
                 Export
               </Button>
               <Link href={`/topics/${topicId}/scripts`}>
-                <Button size="sm" className="gap-2">
+                <Button
+                  size="sm"
+                  className="gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0"
+                >
                   <MessageSquare className="h-4 w-4" />
                   Generate Scripts
                 </Button>
@@ -441,13 +488,16 @@ export default function InsightsPage() {
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-3 mb-8">
-          <AnimatedCard delay={0.1}>
+          <AnimatedCard
+            delay={0.1}
+            className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border-purple-200/50 dark:border-purple-800/50 hover:border-purple-300 dark:hover:border-purple-700 transition-all hover:shadow-lg hover:shadow-purple-500/10"
+          >
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Total Insights</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
+              <FileText className="h-4 w-4 text-purple-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">
+              <div className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                 <AnimatedCounter value={insights.length} />
               </div>
               <p className="text-xs text-muted-foreground mt-1">
@@ -456,13 +506,16 @@ export default function InsightsPage() {
             </CardContent>
           </AnimatedCard>
 
-          <AnimatedCard delay={0.2}>
+          <AnimatedCard
+            delay={0.2}
+            className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border-purple-200/50 dark:border-purple-800/50 hover:border-blue-300 dark:hover:border-blue-700 transition-all hover:shadow-lg hover:shadow-blue-500/10"
+          >
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Data Points</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <TrendingUp className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">
+              <div className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
                 <AnimatedCounter value={dataPoints.length} />
               </div>
               <p className="text-xs text-muted-foreground mt-1">
@@ -471,13 +524,16 @@ export default function InsightsPage() {
             </CardContent>
           </AnimatedCard>
 
-          <AnimatedCard delay={0.3}>
+          <AnimatedCard
+            delay={0.3}
+            className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border-purple-200/50 dark:border-purple-800/50 hover:border-pink-300 dark:hover:border-pink-700 transition-all hover:shadow-lg hover:shadow-pink-500/10"
+          >
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">High Confidence</CardTitle>
-              <Sparkles className="h-4 w-4 text-muted-foreground" />
+              <Sparkles className="h-4 w-4 text-pink-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">
+              <div className="text-4xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
                 <AnimatedCounter
                   value={insights.filter(i => i.confidence.toLowerCase() === 'high').length}
                 />
@@ -491,18 +547,47 @@ export default function InsightsPage() {
 
         {/* Tabs */}
         <Tabs defaultValue="insights" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="insights" className="gap-2">
-              <FileText className="h-4 w-4" />
-              Insights ({filteredInsights.length})
+          <TabsList className="grid w-full grid-cols-4 h-auto p-1 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-purple-200/50 dark:border-purple-800/50">
+            <TabsTrigger
+              value="insights"
+              className="gap-2 py-3 px-4 text-base data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
+            >
+              <FileText className="h-5 w-5" />
+              <span className="font-semibold">Insights</span>
+              <Badge variant="secondary" className="ml-1 data-[state=active]:bg-white/20 data-[state=active]:text-white">
+                {filteredInsights.length}
+              </Badge>
             </TabsTrigger>
-            <TabsTrigger value="viral" className="gap-2">
-              <Flame className="h-4 w-4" />
-              Viral Potential ({viralInsights.length})
+            <TabsTrigger
+              value="viral"
+              className="gap-2 py-3 px-4 text-base data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-red-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
+            >
+              <Flame className="h-5 w-5" />
+              <span className="font-semibold">Viral Potential</span>
+              <Badge variant="secondary" className="ml-1 data-[state=active]:bg-white/20 data-[state=active]:text-white">
+                {viralInsights.length}
+              </Badge>
             </TabsTrigger>
-            <TabsTrigger value="data-points" className="gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Data Points ({filteredDataPoints.length})
+            <TabsTrigger
+              value="data-points"
+              className="gap-2 py-3 px-4 text-base data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-cyan-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
+            >
+              <TrendingUp className="h-5 w-5" />
+              <span className="font-semibold">Data Points</span>
+              <Badge variant="secondary" className="ml-1 data-[state=active]:bg-white/20 data-[state=active]:text-white">
+                {filteredDataPoints.length}
+              </Badge>
+            </TabsTrigger>
+            <TabsTrigger
+              value="scripts"
+              onClick={loadAllScripts}
+              className="gap-2 py-3 px-4 text-base data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-pink-600 data-[state=active]:text-white data-[state=active]:shadow-lg"
+            >
+              <Video className="h-5 w-5" />
+              <span className="font-semibold">Scripts</span>
+              <Badge variant="secondary" className="ml-1 data-[state=active]:bg-white/20 data-[state=active]:text-white">
+                {allViralScripts.length + allCompositeScripts.length}
+              </Badge>
             </TabsTrigger>
           </TabsList>
 
@@ -614,9 +699,19 @@ export default function InsightsPage() {
                 const insightText = insight.insight || insight.text || '';
                 const sources = insight.sources || (insight.source_authors ? insight.source_authors.split(',').map(s => s.trim()) : []);
                 const hasProductionNote = insight.production_note && Object.keys(insight.production_note).length > 0;
+                const confidenceLevel = insight.confidence.toLowerCase();
+                const borderGradient = confidenceLevel === 'high'
+                  ? 'border-l-4 border-l-purple-500 dark:border-l-pink-500'
+                  : confidenceLevel === 'medium'
+                  ? 'border-l-4 border-l-blue-500 dark:border-l-cyan-500'
+                  : 'border-l-4 border-l-slate-400 dark:border-l-slate-600';
 
                 return (
-                  <AnimatedCard key={insight.id} delay={index * 0.05} className="hover:shadow-lg transition-shadow">
+                  <AnimatedCard
+                    key={insight.id}
+                    delay={index * 0.05}
+                    className={`hover:shadow-xl hover:scale-[1.02] transition-all duration-300 ${borderGradient}`}
+                  >
                     <CardHeader>
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex items-center gap-3">
@@ -836,9 +931,19 @@ export default function InsightsPage() {
                 const viralScore = insight.viral_score || 0;
                 const viralTier = insight.viral_tier || 'F';
                 const viralBreakdown = insight.viral_breakdown || {};
+                const confidenceLevel = insight.confidence.toLowerCase();
+                const borderGradient = confidenceLevel === 'high'
+                  ? 'border-l-4 border-l-purple-500 dark:border-l-pink-500'
+                  : confidenceLevel === 'medium'
+                  ? 'border-l-4 border-l-blue-500 dark:border-l-cyan-500'
+                  : 'border-l-4 border-l-slate-400 dark:border-l-slate-600';
 
                 return (
-                  <AnimatedCard key={insight.id} delay={index * 0.05} className="hover:shadow-lg transition-shadow">
+                  <AnimatedCard
+                    key={insight.id}
+                    delay={index * 0.05}
+                    className={`hover:shadow-xl hover:scale-[1.02] transition-all duration-300 ${borderGradient}`}
+                  >
                     <CardHeader>
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex items-center gap-3">
@@ -1154,6 +1259,213 @@ export default function InsightsPage() {
                     index={index}
                   />
                 ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="scripts" className="space-y-6">
+            {loadingScriptsTab ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center space-y-4">
+                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-500 border-t-transparent mx-auto"></div>
+                  <p className="text-sm text-muted-foreground">Loading all scripts...</p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-8">
+                {/* Viral Scripts Section */}
+                {allViralScripts.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="h-10 w-1 bg-gradient-to-b from-purple-500 to-pink-500 rounded-full"></div>
+                      <div>
+                        <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                          Viral Scripts
+                        </h2>
+                        <p className="text-sm text-muted-foreground">
+                          {allViralScripts.length} viral script{allViralScripts.length !== 1 ? 's' : ''} generated
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {allViralScripts.map((script, index) => (
+                        <motion.div
+                          key={script.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                        >
+                          <Card className="hover:shadow-xl hover:scale-[1.02] transition-all duration-300 border-l-4 border-l-purple-500 dark:border-l-pink-500 bg-gradient-to-br from-white to-purple-50/30 dark:from-slate-900 dark:to-purple-950/20">
+                            <CardHeader>
+                              <div className="flex items-start justify-between gap-2 mb-2">
+                                {getViralTierBadge(script.viral_tier)}
+                                <Badge variant="secondary" className="font-mono text-xs">
+                                  v{script.version}
+                                </Badge>
+                              </div>
+                              <CardTitle className="text-sm font-semibold line-clamp-2">
+                                {viralInsights.find(i => i.id === script.insight_id)?.insight ||
+                                 viralInsights.find(i => i.id === script.insight_id)?.text ||
+                                 'Viral Script'}
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                <div className="flex items-center gap-1">
+                                  <FileText className="h-3 w-3" />
+                                  {script.script_json?.total_word_count || 0} words
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <TrendingUp className="h-3 w-3" />
+                                  {script.script_json?.total_duration || '0s'}
+                                </div>
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {new Date(script.created_at).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </div>
+                              <Button
+                                onClick={() => {
+                                  setGeneratedScript({
+                                    id: script.id,
+                                    insight_id: script.insight_id || 0,
+                                    insight_text: '',
+                                    viral_score: script.viral_score,
+                                    viral_tier: script.viral_tier,
+                                    version: script.version,
+                                    total_versions: 1,
+                                    created_at: script.created_at,
+                                    script: script.script_json
+                                  });
+                                  setShowScriptModal(true);
+                                }}
+                                className="w-full gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0"
+                                size="sm"
+                              >
+                                <Video className="h-4 w-4" />
+                                View Script
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Composite Scripts Section */}
+                {allCompositeScripts.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="h-10 w-1 bg-gradient-to-b from-blue-500 to-cyan-500 rounded-full"></div>
+                      <div>
+                        <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                          Composite Scripts
+                        </h2>
+                        <p className="text-sm text-muted-foreground">
+                          {allCompositeScripts.length} composite script{allCompositeScripts.length !== 1 ? 's' : ''} generated
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {allCompositeScripts.map((script, index) => (
+                        <motion.div
+                          key={script.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                        >
+                          <Card className="hover:shadow-xl hover:scale-[1.02] transition-all duration-300 border-l-4 border-l-blue-500 dark:border-l-cyan-500 bg-gradient-to-br from-white to-blue-50/30 dark:from-slate-900 dark:to-blue-950/20">
+                            <CardHeader>
+                              <div className="flex items-start justify-between gap-2 mb-2">
+                                <Badge className={script.script_type === 'long-form'
+                                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0'
+                                  : 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-0'
+                                }>
+                                  {script.script_type === 'long-form' ? 'Long-Form' : 'Short-Form'}
+                                </Badge>
+                                <Badge variant="secondary" className="gap-1 text-xs">
+                                  <Sparkles className="h-3 w-3" />
+                                  {script.total_insights} insights
+                                </Badge>
+                              </div>
+                              <CardTitle className="text-sm font-semibold">
+                                {script.script_type === 'long-form' ? '8-15 min' : '1:30-1:45'} Composite Script
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                <div className="flex items-center gap-1">
+                                  <FileText className="h-3 w-3" />
+                                  {script.script_json?.total_word_count || 0} words
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <TrendingUp className="h-3 w-3" />
+                                  {script.script_json?.total_duration || '0s'}
+                                </div>
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {new Date(script.created_at).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </div>
+                              <Button
+                                onClick={() => {
+                                  setCompositeScript(script);
+                                  if (script.script_type === 'long-form') {
+                                    setShowLongFormModal(true);
+                                  } else {
+                                    setShowShortFormModal(true);
+                                  }
+                                }}
+                                className="w-full gap-2 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white border-0"
+                                size="sm"
+                              >
+                                <Video className="h-4 w-4" />
+                                View Script
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Empty State */}
+                {allViralScripts.length === 0 && allCompositeScripts.length === 0 && (
+                  <Card className="border-dashed">
+                    <CardContent className="pt-12 pb-12 text-center">
+                      <Video className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                      <h3 className="text-lg font-semibold mb-2">No scripts generated yet</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Start by generating viral scripts from the Viral Potential tab or create composite scripts from multiple insights.
+                      </p>
+                      <div className="flex items-center justify-center gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            const tabTrigger = document.querySelector('[value="viral"]') as HTMLElement;
+                            tabTrigger?.click();
+                          }}
+                          className="gap-2"
+                        >
+                          <Flame className="h-4 w-4" />
+                          Go to Viral Potential
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             )}
           </TabsContent>
