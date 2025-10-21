@@ -1760,37 +1760,16 @@ export default function InsightsPage() {
 
                 {/* Chapters */}
                 {'chapters' in compositeScript.script_json.script &&
-                  compositeScript.script_json.script.chapters.map((chapter, idx) => (
+                  compositeScript.script_json.script.chapters.map((chapter: any, idx: number) => (
                     <AccordionItem key={idx} value={`chapter-${idx}`}>
                       <AccordionTrigger className="text-lg font-semibold text-blue-600 dark:text-blue-400">
-                        📖 Chapter {chapter.chapter_number}: {chapter.chapter_title}
+                        📖 Chapter {chapter.chapter_number}: {chapter.title} ({chapter.word_count} words • {chapter.duration_seconds}s)
                       </AccordionTrigger>
                       <AccordionContent>
-                        <div className="space-y-3">
-                          <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-3">
-                            <p className="text-xs font-semibold text-blue-700 dark:text-blue-400 mb-1">INTRO ({chapter.intro.duration_seconds}s)</p>
-                            <p className="text-sm text-slate-700 dark:text-slate-300">{chapter.intro.text}</p>
-                          </div>
-                          <div className="bg-cyan-50 dark:bg-cyan-950/20 rounded-lg p-3">
-                            <p className="text-xs font-semibold text-cyan-700 dark:text-cyan-400 mb-1">SETUP ({chapter.setup.duration_seconds}s)</p>
-                            <p className="text-sm text-slate-700 dark:text-slate-300">{chapter.setup.text}</p>
-                          </div>
-                          <div className="bg-amber-50 dark:bg-amber-950/20 rounded-lg p-3">
-                            <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-1">REVEAL ({chapter.reveal.duration_seconds}s)</p>
-                            <p className="text-sm text-slate-700 dark:text-slate-300">{chapter.reveal.text}</p>
-                          </div>
-                          <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-3">
-                            <p className="text-xs font-semibold text-green-700 dark:text-green-400 mb-1">EXAMPLE ({chapter.example.duration_seconds}s)</p>
-                            <p className="text-sm text-slate-700 dark:text-slate-300">{chapter.example.text}</p>
-                          </div>
-                          <div className="bg-emerald-50 dark:bg-emerald-950/20 rounded-lg p-3">
-                            <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-1">MINI-SOLUTION ({chapter.mini_solution.duration_seconds}s)</p>
-                            <p className="text-sm text-slate-700 dark:text-slate-300">{chapter.mini_solution.text}</p>
-                          </div>
-                          <div className="bg-slate-50 dark:bg-slate-950/20 rounded-lg p-3">
-                            <p className="text-xs font-semibold text-slate-700 dark:text-slate-400 mb-1">TRANSITION ({chapter.transition.duration_seconds}s)</p>
-                            <p className="text-sm text-slate-700 dark:text-slate-300">{chapter.transition.text}</p>
-                          </div>
+                        <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-4">
+                          <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line">
+                            {chapter.text}
+                          </p>
                         </div>
                       </AccordionContent>
                     </AccordionItem>
