@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { getTopic, getInsights, getDataPoints, getRawInsights, getRawDataPoints, getViralInsights, generateViralScript, getViralScripts, generateCompositeScript, getCompositeScripts, type Topic, type Insight, type DataPoint, type GeneratedScript, type SavedViralScript, type CompositeScript } from '@/lib/api';
+import { getTopic, getInsights, getDataPoints, getRawInsights, getRawDataPoints, getViralInsights, generateViralScript, getViralScripts, generateCompositeScript, getCompositeScripts, type Topic, type Insight, type DataPoint, type GeneratedScript, type SavedViralScript, type CompositeScript, type LongFormScriptChapter } from '@/lib/api';
 import {
   ArrowLeft,
   Sparkles,
@@ -1760,7 +1760,7 @@ export default function InsightsPage() {
 
                 {/* Chapters */}
                 {'chapters' in compositeScript.script_json.script &&
-                  compositeScript.script_json.script.chapters.map((chapter: any, idx: number) => (
+                  compositeScript.script_json.script.chapters.map((chapter: LongFormScriptChapter, idx: number) => (
                     <AccordionItem key={idx} value={`chapter-${idx}`}>
                       <AccordionTrigger className="text-lg font-semibold text-blue-600 dark:text-blue-400">
                         📖 Chapter {chapter.chapter_number}: {chapter.title} ({chapter.word_count} words • {chapter.duration_seconds}s)

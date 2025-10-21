@@ -113,13 +113,10 @@ export interface SavedViralScript {
 // Composite Script Interfaces (Multi-Insight Scripts)
 export interface LongFormScriptChapter {
   chapter_number: number;
-  chapter_title: string;
-  intro: ScriptSection;
-  setup: ScriptSection;
-  reveal: ScriptSection;
-  example: ScriptSection;
-  mini_solution: ScriptSection;
-  transition: ScriptSection;
+  title: string;
+  text: string;
+  word_count: number;
+  duration_seconds: number;
 }
 
 export interface LongFormScript {
