@@ -917,6 +917,45 @@ export default function InsightsPage() {
               </motion.div>
             )}
 
+            {/* Dual-Track Explanation */}
+            {viralInsights.length > 0 && (
+              <Card className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20 border-orange-200 dark:border-orange-800">
+                <CardContent className="pt-6 pb-6">
+                  <div className="flex items-start gap-3">
+                    <Flame className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h3 className="font-semibold text-orange-900 dark:text-orange-100 mb-2">
+                        Dual-Track Insights System
+                      </h3>
+                      <p className="text-sm text-orange-800 dark:text-orange-200 mb-2">
+                        This tab shows two types of insights sorted by viral potential:
+                      </p>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-start gap-2">
+                          <Badge className="gap-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 flex-shrink-0">
+                            <Sparkles className="h-3 w-3" />
+                            Production
+                          </Badge>
+                          <span className="text-orange-800 dark:text-orange-200">
+                            <strong>Top-ranked foundational insights</strong> with full production notes, selected for query relevance and depth
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <Badge className="gap-1 bg-gradient-to-r from-orange-500 to-red-500 text-white border-0 flex-shrink-0">
+                            <Flame className="h-3 w-3" />
+                            Viral-Only
+                          </Badge>
+                          <span className="text-orange-800 dark:text-orange-200">
+                            <strong>High viral potential insights</strong> that didn&apos;t make the top production list but are highly shareable
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {viralInsights.length === 0 ? (
               <Card>
                 <CardContent className="pt-6 text-center text-muted-foreground">
@@ -962,6 +1001,18 @@ export default function InsightsPage() {
                             <Badge variant="secondary" className="font-semibold">
                               {viralScore}/100
                             </Badge>
+                            {/* Insight Type Badge - Production vs Viral-Only */}
+                            {insight.is_viral_only ? (
+                              <Badge className="gap-1 bg-gradient-to-r from-orange-500 to-red-500 text-white border-0">
+                                <Flame className="h-3 w-3" />
+                                Viral-Only
+                              </Badge>
+                            ) : (
+                              <Badge className="gap-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0">
+                                <Sparkles className="h-3 w-3" />
+                                Production
+                              </Badge>
+                            )}
                             {getConfidenceBadge(insight.confidence)}
                           </div>
                           <CardTitle className="text-lg leading-relaxed">

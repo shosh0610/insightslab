@@ -162,6 +162,7 @@ export interface Insight {
   viral_score?: number;  // Viral potential score (0-100)
   viral_breakdown?: ViralBreakdown;  // Breakdown of 7 scoring dimensions
   viral_tier?: string;  // A, B, C, D, or F
+  is_viral_only?: boolean;  // TRUE = viral-only insight, FALSE = production insight
   insight_type?: string;
   created_at?: string;
 }
