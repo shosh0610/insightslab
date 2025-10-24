@@ -5,10 +5,12 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { getTopics, getResearchSessions, type Topic, type ResearchSession } from '@/lib/api';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getTopics, getResearchSessions, getAllViralInsights, type Topic, type ResearchSession, type Insight } from '@/lib/api';
 import {
   Plus, FileText, TrendingUp, Sparkles, Brain,
-  Zap, Target, Search, BarChart3, AlertCircle, Clock, PlayCircle
+  Zap, Target, Search, BarChart3, AlertCircle, Clock, PlayCircle, Flame, Filter
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -16,8 +18,14 @@ export default function Dashboard() {
   const router = useRouter();
   const [topics, setTopics] = useState<Topic[]>([]);
   const [researchSessions, setResearchSessions] = useState<ResearchSession[]>([]);
+  const [viralInsights, setViralInsights] = useState<Insight[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Filters for viral insights
+  const [tierFilter, setTierFilter] = useState<string>('all');
+  const [topicFilter, setTopicFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<string>('viral_score'); // viral_score | created_at
 
   useEffect(() => {
     async function fetchData() {
@@ -32,8 +40,16 @@ export default function Dashboard() {
           setResearchSessions(sessionsData);
         } catch (sessionsErr) {
           console.log('Research sessions not available yet:', sessionsErr);
-          // Don't set error - just continue without sessions
           setResearchSessions([]);
+        }
+
+        // Fetch all viral insights
+        try {
+          const viralData = await getAllViralInsights();
+          setViralInsights(viralData);
+        } catch (viralErr) {
+          console.log('Viral insights not available yet:', viralErr);
+          setViralInsights([]);
         }
       } catch (err) {
         console.error('API Error:', err);
@@ -58,6 +74,48 @@ export default function Dashboard() {
     const badge = variants[status] || variants.pending;
     return <Badge variant={badge.variant}>{badge.label}</Badge>;
   };
+
+  const getTierBadge = (tier: string) => {
+    const colors: Record<string, string> = {
+      'A': 'bg-gradient-to-r from-purple-500 to-pink-500 text-white',
+      'B': 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white',
+      'C': 'bg-gradient-to-r from-green-500 to-emerald-500 text-white',
+      'D': 'bg-gradient-to-r from-amber-500 to-orange-500 text-white',
+      'F': 'bg-gradient-to-r from-slate-400 to-slate-500 text-white',
+    };
+
+    return (
+      <Badge className={colors[tier] || 'bg-gray-500 text-white'}>
+        {tier}-Tier
+      </Badge>
+    );
+  };
+
+  // Filter and sort viral insights
+  const filteredInsights = viralInsights
+    .filter(insight => {
+      if (tierFilter !== 'all' && insight.viral_tier !== tierFilter) return false;
+      if (topicFilter !== 'all' && insight.topic_id?.toString() !== topicFilter) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'viral_score') {
+        return (b.viral_score || 0) - (a.viral_score || 0);
+      } else {
+        return new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime();
+      }
+    });
+
+  // Get unique topics from viral insights
+  const topicsWithInsights = Array.from(
+    new Set(viralInsights.map(i => i.topic_id?.toString()).filter(Boolean))
+  ).map(topicId => {
+    const insight = viralInsights.find(i => i.topic_id?.toString() === topicId);
+    return {
+      id: topicId,
+      name: insight?.topic_name || 'Unknown'
+    };
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-950 dark:to-slate-900">
@@ -88,28 +146,6 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        {/* Hero Section */}
-        {!loading && topics.length === 0 && !error && (
-          <div className="text-center py-12 mb-12">
-            <div className="inline-block p-4 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl mb-6">
-              <Brain className="h-16 w-16 text-white" />
-            </div>
-            <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Research Made Intelligent
-            </h2>
-            <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Let AI discover, analyze, and synthesize knowledge from the world&apos;s best sources.
-              Save hundreds of hours on research.
-            </p>
-            <Link href="/topics/new">
-              <Button size="lg" className="gap-2 text-lg px-8 py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
-                <Sparkles className="h-6 w-6" />
-                Create Your First Topic
-              </Button>
-            </Link>
-          </div>
-        )}
-
         {/* Loading State */}
         {loading && (
           <div className="flex flex-col items-center justify-center py-20">
@@ -121,7 +157,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Error State with Debug Info */}
+        {/* Error State */}
         {error && (
           <Card className="border-amber-500 bg-amber-50 dark:bg-amber-950/20 max-w-3xl mx-auto">
             <CardHeader>
@@ -151,47 +187,6 @@ export default function Dashboard() {
               </div>
             </CardHeader>
           </Card>
-        )}
-
-        {/* Features Section (shown when no topics) */}
-        {!loading && topics.length === 0 && !error && (
-          <div className="grid md:grid-cols-3 gap-6 mb-12">
-            <Card className="border-2 hover:border-blue-500 transition-colors">
-              <CardHeader>
-                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center mb-4">
-                  <Search className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                </div>
-                <CardTitle>Auto-Discovery</CardTitle>
-                <CardDescription>
-                  AI automatically finds and evaluates the best sources across YouTube, research papers, and articles
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="border-2 hover:border-purple-500 transition-colors">
-              <CardHeader>
-                <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center mb-4">
-                  <Target className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-                </div>
-                <CardTitle>Smart Classification</CardTitle>
-                <CardDescription>
-                  Topics are automatically categorized and matched with domain experts and credible sources
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="border-2 hover:border-indigo-500 transition-colors">
-              <CardHeader>
-                <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900 rounded-lg flex items-center justify-center mb-4">
-                  <BarChart3 className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
-                </div>
-                <CardTitle>AI Synthesis</CardTitle>
-                <CardDescription>
-                  Get key insights, data points, and comprehensive analysis from all sources combined
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </div>
         )}
 
         {/* Research Sessions in Progress */}
@@ -300,97 +295,227 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Topics Grid */}
+        {/* Tabs: Topics and Viral Insights */}
         {!loading && !error && topics.length > 0 && (
-          <>
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-3xl font-bold mb-2">Your Research Topics</h2>
-                  <p className="text-muted-foreground flex items-center gap-2">
-                    <BarChart3 className="h-4 w-4" />
-                    {topics.length} {topics.length === 1 ? 'topic' : 'topics'} • AI-powered insights ready
-                  </p>
-                </div>
-                <Link href="/topics/new">
-                  <Button size="lg" variant="outline" className="gap-2">
-                    <Plus className="h-5 w-5" />
-                    New Topic
-                  </Button>
-                </Link>
-              </div>
+          <Tabs defaultValue="topics" className="w-full">
+            <div className="flex items-center justify-between mb-6">
+              <TabsList className="grid w-[400px] grid-cols-2">
+                <TabsTrigger value="topics" className="gap-2">
+                  <FileText className="h-4 w-4" />
+                  Topics
+                  <Badge variant="secondary" className="ml-1">{topics.length}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="viral" className="gap-2">
+                  <Flame className="h-4 w-4" />
+                  Viral Insights
+                  <Badge variant="secondary" className="ml-1">{viralInsights.length}</Badge>
+                </TabsTrigger>
+              </TabsList>
+              <Link href="/topics/new">
+                <Button size="lg" variant="outline" className="gap-2">
+                  <Plus className="h-5 w-5" />
+                  New Topic
+                </Button>
+              </Link>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {topics.map((topic) => (
-                <Link key={topic.id} href={`/topics/${topic.id}/insights`}>
-                  <Card className="h-full hover:shadow-xl hover:scale-105 transition-all cursor-pointer group border-2 hover:border-blue-500">
-                    <CardHeader>
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
-                          <FileText className="h-5 w-5 text-white" />
+            {/* Topics Tab */}
+            <TabsContent value="topics" className="space-y-6">
+              <div className="mb-4">
+                <h2 className="text-3xl font-bold mb-2">Your Research Topics</h2>
+                <p className="text-muted-foreground flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  {topics.length} {topics.length === 1 ? 'topic' : 'topics'} • AI-powered insights ready
+                </p>
+              </div>
+
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {topics.map((topic) => (
+                  <Link key={topic.id} href={`/topics/${topic.id}/insights`}>
+                    <Card className="h-full hover:shadow-xl hover:scale-105 transition-all cursor-pointer group border-2 hover:border-blue-500">
+                      <CardHeader>
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+                            <FileText className="h-5 w-5 text-white" />
+                          </div>
+                          {getStatusBadge(topic.status)}
                         </div>
-                        {getStatusBadge(topic.status)}
-                      </div>
-                      <CardTitle className="group-hover:text-blue-600 transition-colors text-xl">
+                        <CardTitle className="group-hover:text-blue-600 transition-colors text-xl">
+                          {topic.name}
+                        </CardTitle>
+                        <CardDescription className="capitalize flex items-center gap-2">
+                          <Target className="h-3 w-3" />
+                          {topic.category}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <TrendingUp className="h-4 w-4 text-green-600" />
+                            <span>Version {topic.version}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <FileText className="h-4 w-4 text-blue-600" />
+                            <span>Created {new Date(topic.created_at).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            </TabsContent>
+
+            {/* Viral Insights Tab */}
+            <TabsContent value="viral" className="space-y-6">
+              <div className="mb-6">
+                <h2 className="text-3xl font-bold mb-2">Viral Insights</h2>
+                <p className="text-muted-foreground flex items-center gap-2">
+                  <Flame className="h-4 w-4" />
+                  {viralInsights.length} insights across all topics • Sorted by viral potential
+                </p>
+              </div>
+
+              {/* Filters */}
+              <div className="flex flex-wrap gap-4 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md p-4 rounded-lg border">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Filters:</span>
+                </div>
+
+                <Select value={tierFilter} onValueChange={setTierFilter}>
+                  <SelectTrigger className="w-[150px]">
+                    <SelectValue placeholder="All Tiers" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Tiers</SelectItem>
+                    <SelectItem value="A">A-Tier (85-100)</SelectItem>
+                    <SelectItem value="B">B-Tier (70-84)</SelectItem>
+                    <SelectItem value="C">C-Tier (55-69)</SelectItem>
+                    <SelectItem value="D">D-Tier (40-54)</SelectItem>
+                    <SelectItem value="F">F-Tier (&lt;40)</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={topicFilter} onValueChange={setTopicFilter}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="All Topics" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Topics</SelectItem>
+                    {topicsWithInsights.map(topic => (
+                      <SelectItem key={topic.id} value={topic.id || ''}>
                         {topic.name}
-                      </CardTitle>
-                      <CardDescription className="capitalize flex items-center gap-2">
-                        <Target className="h-3 w-3" />
-                        {topic.category}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <TrendingUp className="h-4 w-4 text-green-600" />
-                          <span>Version {topic.version}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Sort By" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="viral_score">Viral Score (High to Low)</SelectItem>
+                    <SelectItem value="created_at">Recently Added</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <div className="ml-auto text-sm text-muted-foreground">
+                  Showing {filteredInsights.length} of {viralInsights.length} insights
+                </div>
+              </div>
+
+              {/* Viral Insights Grid */}
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {filteredInsights.map((insight) => (
+                  <Link key={insight.id} href={`/topics/${insight.topic_id}/insights`}>
+                    <Card className="h-full hover:shadow-xl hover:scale-105 transition-all cursor-pointer group border-2 hover:border-purple-500">
+                      <CardHeader>
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            {getTierBadge(insight.viral_tier || 'F')}
+                            <Badge variant="outline" className="text-xs">
+                              {insight.viral_score}/100
+                            </Badge>
+                          </div>
+                          {insight.is_viral_only && (
+                            <Badge variant="secondary" className="gap-1">
+                              <Flame className="h-3 w-3" />
+                              Viral
+                            </Badge>
+                          )}
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <FileText className="h-4 w-4 text-blue-600" />
-                          <span>Created {new Date(topic.created_at).toLocaleDateString()}</span>
+                        <CardTitle className="group-hover:text-purple-600 transition-colors text-base line-clamp-2">
+                          {insight.insight || insight.text}
+                        </CardTitle>
+                        <CardDescription className="flex items-center gap-2 mt-2">
+                          <Target className="h-3 w-3" />
+                          {insight.topic_name}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          {insight.sources && insight.sources.length > 0 && (
+                            <div className="text-xs text-muted-foreground">
+                              <span className="font-medium">Sources:</span> {insight.sources.slice(0, 2).join(', ')}
+                              {insight.sources.length > 2 && ` +${insight.sources.length - 2} more`}
+                            </div>
+                          )}
+                          {insight.supporting_data && insight.supporting_data.length > 0 && (
+                            <div className="text-xs text-muted-foreground flex items-center gap-1">
+                              <BarChart3 className="h-3 w-3" />
+                              {insight.supporting_data.length} data points
+                            </div>
+                          )}
                         </div>
-                        {/* @ts-expect-error - synthesized_summary exists in DB but not in type */}
-                        {topic.synthesized_summary && (
-                          <p className="text-sm text-muted-foreground line-clamp-2 mt-3 pt-3 border-t">
-                            {/* @ts-expect-error - synthesized_summary exists in DB but not in type */}
-                            {topic.synthesized_summary}
-                          </p>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          </>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+
+              {filteredInsights.length === 0 && (
+                <Card className="py-12">
+                  <CardContent className="text-center">
+                    <Flame className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No viral insights found with the selected filters.</p>
+                    <Button
+                      variant="outline"
+                      className="mt-4"
+                      onClick={() => {
+                        setTierFilter('all');
+                        setTopicFilter('all');
+                      }}
+                    >
+                      Clear Filters
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+          </Tabs>
         )}
 
-        {/* How it Works Section */}
+        {/* Empty State */}
         {!loading && topics.length === 0 && !error && (
-          <div className="mt-16 pt-16 border-t">
-            <h3 className="text-3xl font-bold text-center mb-12">How It Works</h3>
-            <div className="grid md:grid-cols-4 gap-8">
-              {[
-                { num: '1', icon: Plus, title: 'Create Topic', desc: 'Enter any research topic you want to explore' },
-                { num: '2', icon: Search, title: 'AI Discovery', desc: 'Our AI finds the best sources automatically' },
-                { num: '3', icon: Brain, title: 'Synthesis', desc: 'AI analyzes and extracts key insights' },
-                { num: '4', icon: Sparkles, title: 'Get Results', desc: 'Access comprehensive research instantly' },
-              ].map((step) => (
-                <div key={step.num} className="text-center">
-                  <div className="relative inline-block mb-4">
-                    <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
-                      <step.icon className="h-8 w-8 text-white" />
-                    </div>
-                    <div className="absolute -top-2 -right-2 w-8 h-8 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center border-2 border-blue-600 font-bold text-blue-600">
-                      {step.num}
-                    </div>
-                  </div>
-                  <h4 className="font-semibold text-lg mb-2">{step.title}</h4>
-                  <p className="text-sm text-muted-foreground">{step.desc}</p>
-                </div>
-              ))}
+          <div className="text-center py-12">
+            <div className="inline-block p-4 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl mb-6">
+              <Brain className="h-16 w-16 text-white" />
             </div>
+            <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Research Made Intelligent
+            </h2>
+            <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+              Let AI discover, analyze, and synthesize knowledge from the world&apos;s best sources.
+              Save hundreds of hours on research.
+            </p>
+            <Link href="/topics/new">
+              <Button size="lg" className="gap-2 text-lg px-8 py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                <Sparkles className="h-6 w-6" />
+                Create Your First Topic
+              </Button>
+            </Link>
           </div>
         )}
       </main>

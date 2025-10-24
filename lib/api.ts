@@ -149,6 +149,9 @@ export interface CompositeScript {
 export interface Insight {
   id: number;
   topic_id?: number;
+  topic_name?: string;  // Topic name (for aggregated views)
+  topic_category?: string;  // Topic category
+  topic_slug?: string;  // Topic slug
   insight?: string;  // New API format
   text?: string;     // Old format (deprecated)
   confidence: string;
@@ -396,6 +399,20 @@ export async function getViralInsights(topicId: number): Promise<Insight[]> {
 
   if (!response.ok) {
     throw new Error(`Failed to get viral insights: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get ALL viral insights across all topics
+ * Sorted by viral score (highest first)
+ */
+export async function getAllViralInsights(): Promise<Insight[]> {
+  const response = await fetch(`${API_URL}/api/topics/viral-insights/all`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to get all viral insights: ${response.statusText}`);
   }
 
   return response.json();
