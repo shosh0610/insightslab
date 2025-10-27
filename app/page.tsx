@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { getTopics, getResearchSessions, getAllViralInsights, type Topic, type ResearchSession, type Insight } from '@/lib/api';
 import {
   Plus, FileText, TrendingUp, Sparkles, Brain,
-  Zap, Target, Search, BarChart3, AlertCircle, Clock, PlayCircle, Flame, Filter
+  Zap, Target, Search, BarChart3, AlertCircle, Clock, PlayCircle, Flame, Filter, Download
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -116,6 +116,73 @@ export default function Dashboard() {
       name: insight?.topic_name || 'Unknown'
     };
   });
+
+  // Export filtered viral insights to CSV
+  const exportViralInsightsToCSV = () => {
+    // Prepare CSV headers
+    const headers = [
+      'Rank',
+      'Insight Text',
+      'Viral Score',
+      'Tier',
+      'Type',
+      'Topic',
+      'Confidence',
+      'Hook Strength',
+      'Emotional Resonance',
+      'Specificity',
+      'Counterintuitiveness',
+      'Universal Relatability',
+      'Story Potential',
+      'Shareability',
+      'Source Authors',
+      'Production Notes'
+    ];
+
+    // Prepare CSV rows from filtered insights
+    const rows = filteredInsights.map((insight, index) => {
+      const viralBreakdown = insight.viral_breakdown || {};
+      const productionNote = insight.production_note || {};
+
+      return [
+        index + 1,
+        `"${(insight.insight || insight.text || '').replace(/"/g, '""')}"`,
+        insight.viral_score || 0,
+        insight.viral_tier || 'F',
+        insight.is_viral_only ? 'Viral-Only' : 'Production',
+        `"${(insight.topic_name || '').replace(/"/g, '""')}"`,
+        insight.confidence || '',
+        viralBreakdown.hook_strength?.score || '',
+        viralBreakdown.emotional_resonance?.score || '',
+        viralBreakdown.specificity?.score || '',
+        viralBreakdown.counterintuitiveness?.score || '',
+        viralBreakdown.universal_relatability?.score || '',
+        viralBreakdown.story_potential?.score || '',
+        viralBreakdown.shareability?.score || '',
+        `"${(insight.source_authors || '').replace(/"/g, '""')}"`,
+        `"${Object.entries(productionNote).map(([key, value]) => `${key}: ${value}`).join('; ').replace(/"/g, '""')}"`
+      ];
+    });
+
+    // Create CSV content
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    const filterSuffix = tierFilter !== 'all' ? `-tier-${tierFilter}` : '';
+    const topicSuffix = topicFilter !== 'all' ? `-topic-${topicFilter}` : '';
+    link.setAttribute('download', `viral-insights-all${filterSuffix}${topicSuffix}-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-950 dark:to-slate-900">
@@ -368,12 +435,24 @@ export default function Dashboard() {
 
             {/* Viral Insights Tab */}
             <TabsContent value="viral" className="space-y-6">
-              <div className="mb-6">
-                <h2 className="text-3xl font-bold mb-2">Viral Insights</h2>
-                <p className="text-muted-foreground flex items-center gap-2">
-                  <Flame className="h-4 w-4" />
-                  {viralInsights.length} insights across all topics • Sorted by viral potential
-                </p>
+              <div className="mb-6 flex items-start justify-between">
+                <div>
+                  <h2 className="text-3xl font-bold mb-2">Viral Insights</h2>
+                  <p className="text-muted-foreground flex items-center gap-2">
+                    <Flame className="h-4 w-4" />
+                    {viralInsights.length} insights across all topics • Sorted by viral potential
+                  </p>
+                </div>
+                {viralInsights.length > 0 && (
+                  <Button
+                    onClick={exportViralInsightsToCSV}
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    Export to CSV ({filteredInsights.length})
+                  </Button>
+                )}
               </div>
 
               {/* Filters */}
