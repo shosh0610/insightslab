@@ -395,6 +395,68 @@ export default function InsightsPage() {
     URL.revokeObjectURL(url);
   };
 
+  const exportViralInsightsToCSV = () => {
+    // Prepare CSV headers
+    const headers = [
+      'Rank',
+      'Insight Text',
+      'Viral Score',
+      'Tier',
+      'Type',
+      'Confidence',
+      'Hook Strength',
+      'Emotional Resonance',
+      'Specificity',
+      'Counterintuitiveness',
+      'Universal Relatability',
+      'Story Potential',
+      'Shareability',
+      'Source Authors',
+      'Production Notes'
+    ];
+
+    // Prepare CSV rows
+    const rows = viralInsights.map((insight, index) => {
+      const viralBreakdown = insight.viral_breakdown || {};
+      const productionNote = insight.production_note || {};
+
+      return [
+        index + 1,
+        `"${(insight.insight || insight.text || '').replace(/"/g, '""')}"`,
+        insight.viral_score || 0,
+        insight.viral_tier || 'F',
+        insight.is_viral_only ? 'Viral-Only' : 'Production',
+        insight.confidence || '',
+        viralBreakdown.hook_strength?.score || '',
+        viralBreakdown.emotional_resonance?.score || '',
+        viralBreakdown.specificity?.score || '',
+        viralBreakdown.counterintuitiveness?.score || '',
+        viralBreakdown.universal_relatability?.score || '',
+        viralBreakdown.story_potential?.score || '',
+        viralBreakdown.shareability?.score || '',
+        `"${(insight.source_authors || '').replace(/"/g, '""')}"`,
+        `"${Object.entries(productionNote).map(([key, value]) => `${key}: ${value}`).join('; ').replace(/"/g, '""')}"`
+      ];
+    });
+
+    // Create CSV content
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `viral-insights-${topic?.name || topicId}-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -915,6 +977,20 @@ export default function InsightsPage() {
                   </div>
                 </div>
               </motion.div>
+            )}
+
+            {/* Export Button */}
+            {viralInsights.length > 0 && (
+              <div className="flex justify-end mb-4">
+                <Button
+                  onClick={exportViralInsightsToCSV}
+                  variant="outline"
+                  className="gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  Export to CSV ({viralInsights.length} insights)
+                </Button>
+              </div>
             )}
 
             {/* Dual-Track Explanation */}
