@@ -273,7 +273,7 @@ export interface ProductionNotes {
   tips: string[];
 }
 
-export interface GeneratedScript {
+export interface AIVideoScript {
   video_title: string;
   duration_seconds: number;
   format: string;
@@ -284,14 +284,14 @@ export interface GeneratedScript {
   hook_strategy: string;
 }
 
-export interface GeneratedScriptResponse {
+export interface AIVideoScriptResponse {
   id: number;
   viral_idea_id: number;
   script_type: string;
   duration: number;
   voice_tone: string;
   created_at: string;
-  script: GeneratedScript;
+  script: AIVideoScript;
 }
 
 export interface SynthesisStatus {
@@ -706,7 +706,7 @@ export async function generateAIScript(
   scriptType: 'explainer' | 'reaction' | 'tutorial' | 'story' = 'explainer',
   duration: 15 | 30 | 45 | 60 = 45,
   voiceTone: 'enthusiastic' | 'analytical' | 'casual' | 'dramatic' = 'enthusiastic'
-): Promise<GeneratedScriptResponse> {
+): Promise<AIVideoScriptResponse> {
   const response = await fetch(
     `${API_URL}/api/topics/${topicId}/viral-content/${ideaId}/generate-script?script_type=${scriptType}&duration=${duration}&voice_tone=${voiceTone}`,
     {
@@ -727,7 +727,7 @@ export async function generateAIScript(
 export async function getGeneratedScripts(
   topicId: number,
   ideaId: number
-): Promise<GeneratedScriptResponse[]> {
+): Promise<AIVideoScriptResponse[]> {
   const response = await fetch(`${API_URL}/api/topics/${topicId}/viral-content/${ideaId}/scripts`);
 
   if (!response.ok) {

@@ -11,7 +11,7 @@ import { AnimatedCounter } from '@/components/ui/animated-counter';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { getTopic, getViralContent, generateAIScript, type Topic, type ViralContentIdea, type ViralContentResponse, type GeneratedScriptResponse } from '@/lib/api';
+import { getTopic, getViralContent, generateAIScript, type Topic, type ViralContentIdea, type ViralContentResponse, type AIVideoScriptResponse } from '@/lib/api';
 import {
   ArrowLeft,
   Flame,
@@ -42,7 +42,7 @@ export default function ViralContentPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [generatingScript, setGeneratingScript] = useState<number | null>(null);
-  const [selectedScript, setSelectedScript] = useState<GeneratedScriptResponse | null>(null);
+  const [selectedScript, setSelectedScript] = useState<AIVideoScriptResponse | null>(null);
   const [showScriptModal, setShowScriptModal] = useState(false);
 
   useEffect(() => {
