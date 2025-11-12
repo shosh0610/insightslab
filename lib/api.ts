@@ -236,7 +236,7 @@ export interface ResearchSession {
 // Viral Content Types
 export interface ViralContentIdea {
   id: number;
-  content_data: Record<string, any>;
+  content_data: Record<string, unknown>;
   viral_score: number;
   shock_score: number;
   source_video_title: string;
