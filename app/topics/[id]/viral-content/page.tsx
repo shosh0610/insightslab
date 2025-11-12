@@ -89,29 +89,34 @@ export default function ViralContentPage() {
     }
   };
 
-  const loadSavedScripts = async (ideaId: number) => {
+  const loadSavedScripts = async (ideaId: number): Promise<AIVideoScriptResponse[]> => {
     try {
       setLoadingScripts(ideaId);
       const scripts = await getGeneratedScripts(topicId, ideaId);
       setSavedScripts(prev => ({ ...prev, [ideaId]: scripts }));
+      return scripts;
     } catch (err) {
       console.error('Failed to load saved scripts:', err);
+      return [];
     } finally {
       setLoadingScripts(null);
     }
   };
 
   const handleViewScripts = async (ideaId: number) => {
-    const scripts = savedScripts[ideaId];
-    if (!scripts || scripts.length === 0) {
-      await loadSavedScripts(ideaId);
-      const loadedScripts = savedScripts[ideaId];
-      if (loadedScripts && loadedScripts.length > 0) {
-        setSelectedScript(loadedScripts[0]);
+    const cachedScripts = savedScripts[ideaId];
+    if (!cachedScripts || cachedScripts.length === 0) {
+      // Load from API
+      const scripts = await loadSavedScripts(ideaId);
+      if (scripts && scripts.length > 0) {
+        setSelectedScript(scripts[0]);
         setShowScriptModal(true);
+      } else {
+        alert('No scripts generated yet for this idea. Click "Generate Script" first!');
       }
     } else {
-      setSelectedScript(scripts[0]);
+      // Use cached scripts
+      setSelectedScript(cachedScripts[0]);
       setShowScriptModal(true);
     }
   };
