@@ -351,14 +351,14 @@ export default function ViralContentPage() {
                               <Badge className="bg-orange-500">
                                 {item.viral_score}/100
                               </Badge>
-                              {data.view_count && (
+                              {data.view_count ? (
                                 <Badge variant="outline">{String(data.view_count)} views</Badge>
-                              )}
+                              ) : null}
                             </div>
                             <CardTitle className="text-lg">{String(data.mentioned_video_title || '')}</CardTitle>
-                            {data.original_creator && (
+                            {data.original_creator ? (
                               <CardDescription>by {String(data.original_creator)}</CardDescription>
-                            )}
+                            ) : null}
                           </div>
                           <Button
                             variant="ghost"
@@ -443,12 +443,12 @@ export default function ViralContentPage() {
                           <p className="text-sm font-semibold mb-1">Video Angle:</p>
                           <p className="text-sm text-muted-foreground">{String(data.video_angle || '')}</p>
                         </div>
-                        {data.source_credibility && (
+                        {data.source_credibility ? (
                           <div>
                             <p className="text-sm font-semibold mb-1">Source:</p>
                             <p className="text-sm text-muted-foreground">{String(data.source_credibility)}</p>
                           </div>
-                        )}
+                        ) : null}
                         <div className="flex items-center gap-2 text-xs text-muted-foreground border-t pt-3">
                           <span>From: {item.source_channel}</span>
                           <span>·</span>
@@ -506,12 +506,12 @@ export default function ViralContentPage() {
                           <p className="text-sm font-semibold mb-1">Structure:</p>
                           <p className="text-sm text-muted-foreground">{String(data.structure || '')}</p>
                         </div>
-                        {data.examples_mentioned && (
+                        {data.examples_mentioned ? (
                           <div>
                             <p className="text-sm font-semibold mb-1">Examples:</p>
                             <p className="text-sm text-muted-foreground">{String(data.examples_mentioned)}</p>
                           </div>
-                        )}
+                        ) : null}
                         <div>
                           <p className="text-sm font-semibold mb-1">Adaptation Notes:</p>
                           <p className="text-sm text-muted-foreground">{String(data.adaptation_notes || '')}</p>
