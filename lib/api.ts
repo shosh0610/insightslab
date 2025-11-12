@@ -255,6 +255,45 @@ export interface ViralContentResponse {
   trending_formats: ViralContentIdea[];
 }
 
+export interface ScriptShot {
+  shot_number: number;
+  duration: string;
+  ai_prompt: string;
+  voiceover: string;
+  text_overlay: string | null;
+  text_position: string | null;
+  music_note: string;
+}
+
+export interface ProductionNotes {
+  ai_tools_needed: string[];
+  editing_software: string;
+  estimated_production_time: string;
+  difficulty: string;
+  tips: string[];
+}
+
+export interface GeneratedScript {
+  video_title: string;
+  duration_seconds: number;
+  format: string;
+  shots: ScriptShot[];
+  production_notes: ProductionNotes;
+  full_voiceover: string;
+  music_suggestion: string;
+  hook_strategy: string;
+}
+
+export interface GeneratedScriptResponse {
+  id: number;
+  viral_idea_id: number;
+  script_type: string;
+  duration: number;
+  voice_tone: string;
+  created_at: string;
+  script: GeneratedScript;
+}
+
 export interface SynthesisStatus {
   status: 'pending' | 'processing' | 'completed' | 'failed';
   progress: number;
@@ -653,6 +692,46 @@ export async function getViralContent(topicId: number): Promise<ViralContentResp
 
   if (!response.ok) {
     throw new Error(`Failed to get viral content: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Generate AI video production script from viral content idea
+ */
+export async function generateAIScript(
+  topicId: number,
+  ideaId: number,
+  scriptType: 'explainer' | 'reaction' | 'tutorial' | 'story' = 'explainer',
+  duration: 15 | 30 | 45 | 60 = 45,
+  voiceTone: 'enthusiastic' | 'analytical' | 'casual' | 'dramatic' = 'enthusiastic'
+): Promise<GeneratedScriptResponse> {
+  const response = await fetch(
+    `${API_URL}/api/topics/${topicId}/viral-content/${ideaId}/generate-script?script_type=${scriptType}&duration=${duration}&voice_tone=${voiceTone}`,
+    {
+      method: 'POST',
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to generate script: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get all generated scripts for a viral content idea
+ */
+export async function getGeneratedScripts(
+  topicId: number,
+  ideaId: number
+): Promise<GeneratedScriptResponse[]> {
+  const response = await fetch(`${API_URL}/api/topics/${topicId}/viral-content/${ideaId}/scripts`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to get generated scripts: ${response.statusText}`);
   }
 
   return response.json();
