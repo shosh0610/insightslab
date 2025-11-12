@@ -11,7 +11,7 @@ import { AnimatedCounter } from '@/components/ui/animated-counter';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { getTopic, getViralContent, generateAIScript, type Topic, type ViralContentIdea, type ViralContentResponse, type AIVideoScriptResponse } from '@/lib/api';
+import { getTopic, getViralContent, generateAIScript, getGeneratedScripts, type Topic, type ViralContentIdea, type ViralContentResponse, type AIVideoScriptResponse } from '@/lib/api';
 import {
   ArrowLeft,
   Flame,
@@ -44,6 +44,8 @@ export default function ViralContentPage() {
   const [generatingScript, setGeneratingScript] = useState<number | null>(null);
   const [selectedScript, setSelectedScript] = useState<AIVideoScriptResponse | null>(null);
   const [showScriptModal, setShowScriptModal] = useState(false);
+  const [loadingScripts, setLoadingScripts] = useState<number | null>(null);
+  const [savedScripts, setSavedScripts] = useState<Record<number, AIVideoScriptResponse[]>>({});
 
   useEffect(() => {
     async function fetchData() {
@@ -77,12 +79,127 @@ export default function ViralContentPage() {
       const script = await generateAIScript(topicId, ideaId, 'explainer', 45, 'enthusiastic');
       setSelectedScript(script);
       setShowScriptModal(true);
+      // Refresh saved scripts for this idea
+      await loadSavedScripts(ideaId);
     } catch (err) {
       console.error('Failed to generate script:', err);
       alert('Failed to generate script. Please try again.');
     } finally {
       setGeneratingScript(null);
     }
+  };
+
+  const loadSavedScripts = async (ideaId: number) => {
+    try {
+      setLoadingScripts(ideaId);
+      const scripts = await getGeneratedScripts(topicId, ideaId);
+      setSavedScripts(prev => ({ ...prev, [ideaId]: scripts }));
+    } catch (err) {
+      console.error('Failed to load saved scripts:', err);
+    } finally {
+      setLoadingScripts(null);
+    }
+  };
+
+  const handleViewScripts = async (ideaId: number) => {
+    const scripts = savedScripts[ideaId];
+    if (!scripts || scripts.length === 0) {
+      await loadSavedScripts(ideaId);
+      const loadedScripts = savedScripts[ideaId];
+      if (loadedScripts && loadedScripts.length > 0) {
+        setSelectedScript(loadedScripts[0]);
+        setShowScriptModal(true);
+      }
+    } else {
+      setSelectedScript(scripts[0]);
+      setShowScriptModal(true);
+    }
+  };
+
+  const exportScript = () => {
+    if (!selectedScript) return;
+
+    const script = selectedScript.script;
+
+    // Build comprehensive text file
+    let content = `AI VIDEO PRODUCTION SCRIPT\n`;
+    content += `${'='.repeat(80)}\n\n`;
+    content += `Title: ${script.video_title}\n`;
+    content += `Duration: ${selectedScript.duration}s\n`;
+    content += `Type: ${selectedScript.script_type}\n`;
+    content += `Voice Tone: ${selectedScript.voice_tone}\n`;
+    content += `Generated: ${new Date(selectedScript.created_at).toLocaleString()}\n\n`;
+
+    content += `${'='.repeat(80)}\n`;
+    content += `HOOK STRATEGY\n`;
+    content += `${'='.repeat(80)}\n\n`;
+    content += `${script.hook_strategy}\n\n`;
+
+    content += `${'='.repeat(80)}\n`;
+    content += `FULL SCRIPT - SHOT BY SHOT\n`;
+    content += `${'='.repeat(80)}\n\n`;
+
+    script.shots.forEach((shot) => {
+      content += `${'-'.repeat(80)}\n`;
+      content += `SHOT ${shot.shot_number} (${shot.duration})\n`;
+      content += `${'-'.repeat(80)}\n\n`;
+
+      content += `AI PROMPT:\n${shot.ai_prompt}\n\n`;
+      content += `VOICEOVER:\n"${shot.voiceover}"\n\n`;
+
+      if (shot.text_overlay) {
+        content += `TEXT OVERLAY:\n${shot.text_overlay} (Position: ${shot.text_position})\n\n`;
+      }
+
+      content += `MUSIC NOTE:\n${shot.music_note}\n\n`;
+    });
+
+    content += `${'='.repeat(80)}\n`;
+    content += `COMPLETE VOICEOVER SCRIPT\n`;
+    content += `${'='.repeat(80)}\n\n`;
+    content += `${script.full_voiceover}\n\n`;
+
+    content += `${'='.repeat(80)}\n`;
+    content += `AI PROMPTS ONLY (For Copy-Paste)\n`;
+    content += `${'='.repeat(80)}\n\n`;
+    script.shots.forEach((shot) => {
+      content += `Shot ${shot.shot_number}:\n${shot.ai_prompt}\n\n`;
+    });
+
+    content += `${'='.repeat(80)}\n`;
+    content += `PRODUCTION NOTES\n`;
+    content += `${'='.repeat(80)}\n\n`;
+
+    content += `AI Tools Needed:\n`;
+    script.production_notes.ai_tools_needed.forEach((tool) => {
+      content += `  - ${tool}\n`;
+    });
+    content += `\n`;
+
+    content += `Editing Software: ${script.production_notes.editing_software}\n`;
+    content += `Estimated Time: ${script.production_notes.estimated_production_time}\n`;
+    content += `Difficulty: ${script.production_notes.difficulty}\n\n`;
+
+    content += `Pro Tips:\n`;
+    script.production_notes.tips.forEach((tip, i) => {
+      content += `  ${i + 1}. ${tip}\n`;
+    });
+    content += `\n`;
+
+    content += `${'='.repeat(80)}\n`;
+    content += `MUSIC & AUDIO\n`;
+    content += `${'='.repeat(80)}\n\n`;
+    content += `${script.music_suggestion}\n\n`;
+
+    // Create and download file
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const filename = script.video_title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    a.download = `${filename}_script.txt`;
+    a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   const exportToCSV = () => {
@@ -343,23 +460,36 @@ export default function ViralContentPage() {
                           <span>·</span>
                           <span>{item.source_video_title.substring(0, 50)}...</span>
                         </div>
-                        <Button
-                          className="w-full mt-4"
-                          onClick={() => handleGenerateScript(item.id)}
-                          disabled={generatingScript === item.id}
-                        >
-                          {generatingScript === item.id ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Generating AI Script...
-                            </>
-                          ) : (
-                            <>
-                              <Sparkles className="mr-2 h-4 w-4" />
-                              Generate AI Script
-                            </>
-                          )}
-                        </Button>
+                        <div className="flex gap-2 mt-4">
+                          <Button
+                            className="flex-1"
+                            onClick={() => handleGenerateScript(item.id)}
+                            disabled={generatingScript === item.id}
+                          >
+                            {generatingScript === item.id ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Generating...
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="mr-2 h-4 w-4" />
+                                Generate Script
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => handleViewScripts(item.id)}
+                            disabled={loadingScripts === item.id}
+                          >
+                            {loadingScripts === item.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Film className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
                       </CardContent>
                     </Card>
                   </motion.div>
@@ -427,23 +557,36 @@ export default function ViralContentPage() {
                           <span>·</span>
                           <span>{item.source_video_title.substring(0, 50)}...</span>
                         </div>
-                        <Button
-                          className="w-full mt-4"
-                          onClick={() => handleGenerateScript(item.id)}
-                          disabled={generatingScript === item.id}
-                        >
-                          {generatingScript === item.id ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Generating AI Script...
-                            </>
-                          ) : (
-                            <>
-                              <Sparkles className="mr-2 h-4 w-4" />
-                              Generate AI Script
-                            </>
-                          )}
-                        </Button>
+                        <div className="flex gap-2 mt-4">
+                          <Button
+                            className="flex-1"
+                            onClick={() => handleGenerateScript(item.id)}
+                            disabled={generatingScript === item.id}
+                          >
+                            {generatingScript === item.id ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Generating...
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="mr-2 h-4 w-4" />
+                                Generate Script
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => handleViewScripts(item.id)}
+                            disabled={loadingScripts === item.id}
+                          >
+                            {loadingScripts === item.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Film className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
                       </CardContent>
                     </Card>
                   </motion.div>
@@ -511,23 +654,36 @@ export default function ViralContentPage() {
                           <span>·</span>
                           <span>{item.source_video_title.substring(0, 50)}...</span>
                         </div>
-                        <Button
-                          className="w-full mt-4"
-                          onClick={() => handleGenerateScript(item.id)}
-                          disabled={generatingScript === item.id}
-                        >
-                          {generatingScript === item.id ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Generating AI Script...
-                            </>
-                          ) : (
-                            <>
-                              <Sparkles className="mr-2 h-4 w-4" />
-                              Generate AI Script
-                            </>
-                          )}
-                        </Button>
+                        <div className="flex gap-2 mt-4">
+                          <Button
+                            className="flex-1"
+                            onClick={() => handleGenerateScript(item.id)}
+                            disabled={generatingScript === item.id}
+                          >
+                            {generatingScript === item.id ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Generating...
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="mr-2 h-4 w-4" />
+                                Generate Script
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => handleViewScripts(item.id)}
+                            disabled={loadingScripts === item.id}
+                          >
+                            {loadingScripts === item.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Film className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
                       </CardContent>
                     </Card>
                   </motion.div>
@@ -595,23 +751,36 @@ export default function ViralContentPage() {
                           <span>·</span>
                           <span>{item.source_video_title.substring(0, 50)}...</span>
                         </div>
-                        <Button
-                          className="w-full mt-4"
-                          onClick={() => handleGenerateScript(item.id)}
-                          disabled={generatingScript === item.id}
-                        >
-                          {generatingScript === item.id ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Generating AI Script...
-                            </>
-                          ) : (
-                            <>
-                              <Sparkles className="mr-2 h-4 w-4" />
-                              Generate AI Script
-                            </>
-                          )}
-                        </Button>
+                        <div className="flex gap-2 mt-4">
+                          <Button
+                            className="flex-1"
+                            onClick={() => handleGenerateScript(item.id)}
+                            disabled={generatingScript === item.id}
+                          >
+                            {generatingScript === item.id ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Generating...
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="mr-2 h-4 w-4" />
+                                Generate Script
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => handleViewScripts(item.id)}
+                            disabled={loadingScripts === item.id}
+                          >
+                            {loadingScripts === item.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Film className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
                       </CardContent>
                     </Card>
                   </motion.div>
@@ -639,13 +808,22 @@ export default function ViralContentPage() {
                   {selectedScript.duration}s {selectedScript.script_type} • {selectedScript.voice_tone} tone
                 </p>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowScriptModal(false)}
-              >
-                <X className="h-5 w-5" />
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={exportScript}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Script
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowScriptModal(false)}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
             </div>
 
             <Tabs defaultValue="full-script" className="p-6">
