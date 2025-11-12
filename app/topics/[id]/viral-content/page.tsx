@@ -285,18 +285,18 @@ export default function ViralContentPage() {
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
                               <Badge variant="outline" className="capitalize">
-                                {data.hook_type || 'Hook'}
+                                {String(data.hook_type || 'Hook')}
                               </Badge>
                               <Badge className="bg-orange-500">
                                 {item.viral_score}/100
                               </Badge>
                             </div>
-                            <CardTitle className="text-lg">{data.hook_text}</CardTitle>
+                            <CardTitle className="text-lg">{String(data.hook_text || '')}</CardTitle>
                           </div>
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => copyToClipboard(data.hook_text, item.id)}
+                            onClick={() => copyToClipboard(String(data.hook_text || ''), item.id)}
                           >
                             {copiedId === item.id ? (
                               <Check className="h-4 w-4 text-green-500" />
@@ -309,11 +309,11 @@ export default function ViralContentPage() {
                       <CardContent className="space-y-4">
                         <div>
                           <p className="text-sm font-semibold mb-1">Why It Works:</p>
-                          <p className="text-sm text-muted-foreground">{data.why_it_works}</p>
+                          <p className="text-sm text-muted-foreground">{String(data.why_it_works || '')}</p>
                         </div>
                         <div>
                           <p className="text-sm font-semibold mb-1">Usage Example:</p>
-                          <p className="text-sm text-muted-foreground">{data.usage_example}</p>
+                          <p className="text-sm text-muted-foreground">{String(data.usage_example || '')}</p>
                         </div>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground border-t pt-3">
                           <span>From: {item.source_channel}</span>
@@ -352,18 +352,18 @@ export default function ViralContentPage() {
                                 {item.viral_score}/100
                               </Badge>
                               {data.view_count && (
-                                <Badge variant="outline">{data.view_count} views</Badge>
+                                <Badge variant="outline">{String(data.view_count)} views</Badge>
                               )}
                             </div>
-                            <CardTitle className="text-lg">{data.mentioned_video_title}</CardTitle>
+                            <CardTitle className="text-lg">{String(data.mentioned_video_title || '')}</CardTitle>
                             {data.original_creator && (
-                              <CardDescription>by {data.original_creator}</CardDescription>
+                              <CardDescription>by {String(data.original_creator)}</CardDescription>
                             )}
                           </div>
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => copyToClipboard(data.video_prompt_idea, item.id)}
+                            onClick={() => copyToClipboard(String(data.video_prompt_idea || ''), item.id)}
                           >
                             {copiedId === item.id ? (
                               <Check className="h-4 w-4 text-green-500" />
@@ -376,11 +376,11 @@ export default function ViralContentPage() {
                       <CardContent className="space-y-4">
                         <div>
                           <p className="text-sm font-semibold mb-1">Why It Went Viral:</p>
-                          <p className="text-sm text-muted-foreground">{data.why_viral}</p>
+                          <p className="text-sm text-muted-foreground">{String(data.why_viral || '')}</p>
                         </div>
                         <div>
                           <p className="text-sm font-semibold mb-1">How RotLabHQ Can Use It:</p>
-                          <p className="text-sm text-muted-foreground">{data.video_prompt_idea}</p>
+                          <p className="text-sm text-muted-foreground">{String(data.video_prompt_idea || '')}</p>
                         </div>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground border-t pt-3">
                           <span>From: {item.source_channel}</span>
@@ -419,12 +419,12 @@ export default function ViralContentPage() {
                                 Shock: {item.shock_score}/100
                               </Badge>
                             </div>
-                            <CardTitle className="text-lg">{data.fact_text}</CardTitle>
+                            <CardTitle className="text-lg">{String(data.fact_text || '')}</CardTitle>
                           </div>
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => copyToClipboard(data.fact_text, item.id)}
+                            onClick={() => copyToClipboard(String(data.fact_text || ''), item.id)}
                           >
                             {copiedId === item.id ? (
                               <Check className="h-4 w-4 text-green-500" />
@@ -437,16 +437,16 @@ export default function ViralContentPage() {
                       <CardContent className="space-y-4">
                         <div>
                           <p className="text-sm font-semibold mb-1">Shock Value:</p>
-                          <p className="text-sm text-muted-foreground">{data.shock_value}</p>
+                          <p className="text-sm text-muted-foreground">{String(data.shock_value || '')}</p>
                         </div>
                         <div>
                           <p className="text-sm font-semibold mb-1">Video Angle:</p>
-                          <p className="text-sm text-muted-foreground">{data.video_angle}</p>
+                          <p className="text-sm text-muted-foreground">{String(data.video_angle || '')}</p>
                         </div>
                         {data.source_credibility && (
                           <div>
                             <p className="text-sm font-semibold mb-1">Source:</p>
-                            <p className="text-sm text-muted-foreground">{data.source_credibility}</p>
+                            <p className="text-sm text-muted-foreground">{String(data.source_credibility)}</p>
                           </div>
                         )}
                         <div className="flex items-center gap-2 text-xs text-muted-foreground border-t pt-3">
@@ -486,12 +486,12 @@ export default function ViralContentPage() {
                                 Trending: {item.viral_score}/100
                               </Badge>
                             </div>
-                            <CardTitle className="text-lg">{data.format_pattern}</CardTitle>
+                            <CardTitle className="text-lg">{String(data.format_pattern || '')}</CardTitle>
                           </div>
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => copyToClipboard(data.format_pattern + '\n\n' + data.structure, item.id)}
+                            onClick={() => copyToClipboard(String(data.format_pattern || '') + '\n\n' + String(data.structure || ''), item.id)}
                           >
                             {copiedId === item.id ? (
                               <Check className="h-4 w-4 text-green-500" />
@@ -504,17 +504,17 @@ export default function ViralContentPage() {
                       <CardContent className="space-y-4">
                         <div>
                           <p className="text-sm font-semibold mb-1">Structure:</p>
-                          <p className="text-sm text-muted-foreground">{data.structure}</p>
+                          <p className="text-sm text-muted-foreground">{String(data.structure || '')}</p>
                         </div>
                         {data.examples_mentioned && (
                           <div>
                             <p className="text-sm font-semibold mb-1">Examples:</p>
-                            <p className="text-sm text-muted-foreground">{data.examples_mentioned}</p>
+                            <p className="text-sm text-muted-foreground">{String(data.examples_mentioned)}</p>
                           </div>
                         )}
                         <div>
                           <p className="text-sm font-semibold mb-1">Adaptation Notes:</p>
-                          <p className="text-sm text-muted-foreground">{data.adaptation_notes}</p>
+                          <p className="text-sm text-muted-foreground">{String(data.adaptation_notes || '')}</p>
                         </div>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground border-t pt-3">
                           <span>From: {item.source_channel}</span>
