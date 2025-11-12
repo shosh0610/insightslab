@@ -11,7 +11,7 @@ import { AnimatedCounter } from '@/components/ui/animated-counter';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { getTopic, getViralContent, type Topic, type ViralContentIdea, type ViralContentResponse } from '@/lib/api';
+import { getTopic, getViralContent, generateAIScript, type Topic, type ViralContentIdea, type ViralContentResponse, type GeneratedScriptResponse } from '@/lib/api';
 import {
   ArrowLeft,
   Flame,
@@ -22,7 +22,13 @@ import {
   Search,
   Download,
   Copy,
-  Check
+  Check,
+  Sparkles,
+  Film,
+  Mic,
+  FileText,
+  X,
+  Loader2
 } from 'lucide-react';
 
 export default function ViralContentPage() {
@@ -35,6 +41,9 @@ export default function ViralContentPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [generatingScript, setGeneratingScript] = useState<number | null>(null);
+  const [selectedScript, setSelectedScript] = useState<GeneratedScriptResponse | null>(null);
+  const [showScriptModal, setShowScriptModal] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -60,6 +69,20 @@ export default function ViralContentPage() {
     await navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleGenerateScript = async (ideaId: number) => {
+    try {
+      setGeneratingScript(ideaId);
+      const script = await generateAIScript(topicId, ideaId, 'explainer', 45, 'enthusiastic');
+      setSelectedScript(script);
+      setShowScriptModal(true);
+    } catch (err) {
+      console.error('Failed to generate script:', err);
+      alert('Failed to generate script. Please try again.');
+    } finally {
+      setGeneratingScript(null);
+    }
   };
 
   const exportToCSV = () => {
@@ -320,6 +343,23 @@ export default function ViralContentPage() {
                           <span>·</span>
                           <span>{item.source_video_title.substring(0, 50)}...</span>
                         </div>
+                        <Button
+                          className="w-full mt-4"
+                          onClick={() => handleGenerateScript(item.id)}
+                          disabled={generatingScript === item.id}
+                        >
+                          {generatingScript === item.id ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Generating AI Script...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="mr-2 h-4 w-4" />
+                              Generate AI Script
+                            </>
+                          )}
+                        </Button>
                       </CardContent>
                     </Card>
                   </motion.div>
@@ -387,6 +427,23 @@ export default function ViralContentPage() {
                           <span>·</span>
                           <span>{item.source_video_title.substring(0, 50)}...</span>
                         </div>
+                        <Button
+                          className="w-full mt-4"
+                          onClick={() => handleGenerateScript(item.id)}
+                          disabled={generatingScript === item.id}
+                        >
+                          {generatingScript === item.id ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Generating AI Script...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="mr-2 h-4 w-4" />
+                              Generate AI Script
+                            </>
+                          )}
+                        </Button>
                       </CardContent>
                     </Card>
                   </motion.div>
@@ -454,6 +511,23 @@ export default function ViralContentPage() {
                           <span>·</span>
                           <span>{item.source_video_title.substring(0, 50)}...</span>
                         </div>
+                        <Button
+                          className="w-full mt-4"
+                          onClick={() => handleGenerateScript(item.id)}
+                          disabled={generatingScript === item.id}
+                        >
+                          {generatingScript === item.id ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Generating AI Script...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="mr-2 h-4 w-4" />
+                              Generate AI Script
+                            </>
+                          )}
+                        </Button>
                       </CardContent>
                     </Card>
                   </motion.div>
@@ -521,6 +595,23 @@ export default function ViralContentPage() {
                           <span>·</span>
                           <span>{item.source_video_title.substring(0, 50)}...</span>
                         </div>
+                        <Button
+                          className="w-full mt-4"
+                          onClick={() => handleGenerateScript(item.id)}
+                          disabled={generatingScript === item.id}
+                        >
+                          {generatingScript === item.id ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Generating AI Script...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="mr-2 h-4 w-4" />
+                              Generate AI Script
+                            </>
+                          )}
+                        </Button>
                       </CardContent>
                     </Card>
                   </motion.div>
@@ -529,6 +620,224 @@ export default function ViralContentPage() {
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* Script Modal */}
+      {showScriptModal && selectedScript && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-background rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-hidden"
+          >
+            <div className="flex items-center justify-between p-6 border-b">
+              <div>
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  <Film className="h-6 w-6" />
+                  {selectedScript.script.video_title}
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {selectedScript.duration}s {selectedScript.script_type} • {selectedScript.voice_tone} tone
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowScriptModal(false)}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+
+            <Tabs defaultValue="full-script" className="p-6">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="full-script">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Full Script
+                </TabsTrigger>
+                <TabsTrigger value="ai-prompts">
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  AI Prompts
+                </TabsTrigger>
+                <TabsTrigger value="voiceover">
+                  <Mic className="h-4 w-4 mr-2" />
+                  Voiceover
+                </TabsTrigger>
+                <TabsTrigger value="production">
+                  <Zap className="h-4 w-4 mr-2" />
+                  Production
+                </TabsTrigger>
+              </TabsList>
+
+              <div className="mt-6 max-h-[calc(90vh-240px)] overflow-y-auto">
+                {/* Full Script Tab */}
+                <TabsContent value="full-script" className="space-y-4">
+                  {selectedScript.script.shots.map((shot) => (
+                    <Card key={shot.shot_number}>
+                      <CardHeader>
+                        <CardTitle className="text-sm flex items-center justify-between">
+                          <span>Shot {shot.shot_number} ({shot.duration})</span>
+                          {shot.text_overlay && (
+                            <Badge variant="outline">{shot.text_position}</Badge>
+                          )}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground mb-1">AI PROMPT:</p>
+                          <p className="text-sm">{shot.ai_prompt}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground mb-1">VOICEOVER:</p>
+                          <p className="text-sm italic">{shot.voiceover}</p>
+                        </div>
+                        {shot.text_overlay && (
+                          <div>
+                            <p className="text-xs font-semibold text-muted-foreground mb-1">TEXT OVERLAY:</p>
+                            <p className="text-sm font-bold">{shot.text_overlay}</p>
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground mb-1">MUSIC:</p>
+                          <p className="text-sm">{shot.music_note}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </TabsContent>
+
+                {/* AI Prompts Only Tab */}
+                <TabsContent value="ai-prompts" className="space-y-4">
+                  {selectedScript.script.shots.map((shot) => (
+                    <Card key={shot.shot_number}>
+                      <CardHeader>
+                        <CardTitle className="text-sm">Shot {shot.shot_number} ({shot.duration})</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm font-mono bg-muted p-3 rounded">{shot.ai_prompt}</p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="mt-2"
+                          onClick={() => copyToClipboard(shot.ai_prompt, shot.shot_number)}
+                        >
+                          {copiedId === shot.shot_number ? (
+                            <><Check className="h-3 w-3 mr-1" /> Copied</>
+                          ) : (
+                            <><Copy className="h-3 w-3 mr-1" /> Copy</>
+                          )}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </TabsContent>
+
+                {/* Voiceover Only Tab */}
+                <TabsContent value="voiceover" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Complete Voiceover Script</CardTitle>
+                      <CardDescription>
+                        Duration: {selectedScript.duration}s • Tone: {selectedScript.voice_tone}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                        {selectedScript.script.full_voiceover}
+                      </p>
+                      <Button
+                        variant="outline"
+                        className="mt-4"
+                        onClick={() => copyToClipboard(selectedScript.script.full_voiceover, 999)}
+                      >
+                        {copiedId === 999 ? (
+                          <><Check className="h-4 w-4 mr-2" /> Copied</>
+                        ) : (
+                          <><Copy className="h-4 w-4 mr-2" /> Copy Full Script</>
+                        )}
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  <div className="space-y-2">
+                    <h3 className="font-semibold">Shot-by-Shot Breakdown:</h3>
+                    {selectedScript.script.shots.map((shot) => (
+                      <Card key={shot.shot_number}>
+                        <CardContent className="pt-4">
+                          <p className="text-xs text-muted-foreground mb-1">
+                            Shot {shot.shot_number} ({shot.duration})
+                          </p>
+                          <p className="text-sm italic">{shot.voiceover}</p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </TabsContent>
+
+                {/* Production Notes Tab */}
+                <TabsContent value="production" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Production Requirements</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <p className="text-sm font-semibold mb-2">AI Tools Needed:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedScript.script.production_notes.ai_tools_needed.map((tool, i) => (
+                            <Badge key={i} variant="secondary">{tool}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold mb-1">Editing Software:</p>
+                        <p className="text-sm text-muted-foreground">
+                          {selectedScript.script.production_notes.editing_software}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold mb-1">Estimated Time:</p>
+                        <p className="text-sm text-muted-foreground">
+                          {selectedScript.script.production_notes.estimated_production_time}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold mb-1">Difficulty:</p>
+                        <Badge>{selectedScript.script.production_notes.difficulty}</Badge>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold mb-2">Pro Tips:</p>
+                        <ul className="space-y-1 text-sm text-muted-foreground">
+                          {selectedScript.script.production_notes.tips.map((tip, i) => (
+                            <li key={i}>• {tip}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Music Suggestion</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm">{selectedScript.script.music_suggestion}</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Hook Strategy</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm">{selectedScript.script.hook_strategy}</p>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </div>
+            </Tabs>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
