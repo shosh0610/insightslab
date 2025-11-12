@@ -207,6 +207,7 @@ export interface ResearchResult {
   status: string;
   topic_name: string;
   category: string;
+  research_mode?: string;  // 'strategy_insights' or 'viral_content'
   total_videos_found: number;
   videos: DiscoveredVideo[];
   search_strategy: string;
@@ -222,6 +223,7 @@ export interface ResearchSession {
   id: number;
   topic_name: string;
   category: string;
+  research_mode?: string;  // 'strategy_insights' or 'viral_content'
   status: 'researching' | 'ready_for_selection' | 'synthesizing' | 'completed' | 'failed';
   video_count_requested: number;
   total_videos_found: number;
@@ -229,6 +231,28 @@ export interface ResearchSession {
   completed_at: string | null;
   classification_confidence: number;
   is_supported: boolean;
+}
+
+// Viral Content Types
+export interface ViralContentIdea {
+  id: number;
+  content_data: Record<string, any>;
+  viral_score: number;
+  shock_score: number;
+  source_video_title: string;
+  source_channel: string;
+  created_at: string;
+}
+
+export interface ViralContentResponse {
+  topic_id: number;
+  topic_name: string;
+  research_mode: string;
+  total_ideas: number;
+  video_prompts: ViralContentIdea[];
+  reaction_ideas: ViralContentIdea[];
+  viral_facts: ViralContentIdea[];
+  trending_formats: ViralContentIdea[];
 }
 
 export interface SynthesisStatus {
@@ -280,7 +304,11 @@ export async function getResearchSession(sessionId: number): Promise<ResearchRes
 /**
  * Start research agent for a topic
  */
-export async function startResearch(topicName: string, videoCount: number = 10): Promise<ResearchResult> {
+export async function startResearch(
+  topicName: string,
+  videoCount: number = 10,
+  researchMode: 'strategy_insights' | 'viral_content' = 'strategy_insights'
+): Promise<ResearchResult> {
   const response = await fetch(`${API_URL}/api/research/start/`, {
     method: 'POST',
     headers: {
@@ -289,6 +317,7 @@ export async function startResearch(topicName: string, videoCount: number = 10):
     body: JSON.stringify({
       topic_name: topicName,
       video_count: videoCount,
+      research_mode: researchMode,
     }),
   });
 
@@ -611,6 +640,19 @@ export async function getCompositeScript(topicId: number, scriptId: number): Pro
 
   if (!response.ok) {
     throw new Error(`Failed to get composite script: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get viral content ideas for a topic (for viral_content research mode)
+ */
+export async function getViralContent(topicId: number): Promise<ViralContentResponse> {
+  const response = await fetch(`${API_URL}/api/topics/${topicId}/viral-content`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to get viral content: ${response.statusText}`);
   }
 
   return response.json();

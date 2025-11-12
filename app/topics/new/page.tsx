@@ -9,13 +9,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { startResearch } from '@/lib/api';
-import { ArrowLeft, Sparkles, Clock, DollarSign } from 'lucide-react';
+import { ArrowLeft, Sparkles, Clock, DollarSign, Lightbulb, Flame } from 'lucide-react';
 
 export default function CreateTopicPage() {
   const router = useRouter();
   const [topicName, setTopicName] = useState('');
   const [videoCount, setVideoCount] = useState(10);
+  const [researchMode, setResearchMode] = useState<'strategy_insights' | 'viral_content'>('strategy_insights');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,12 +39,13 @@ export default function CreateTopicPage() {
     setError(null);
 
     try {
-      const result = await startResearch(topicName, videoCount);
+      const result = await startResearch(topicName, videoCount, researchMode);
 
       // Store research results in sessionStorage to access on review page
       sessionStorage.setItem('research_result', JSON.stringify(result));
       sessionStorage.setItem('topic_name', topicName);
       sessionStorage.setItem('video_count', videoCount.toString());
+      sessionStorage.setItem('research_mode', researchMode);
 
       // Navigate to review page (we'll build this next)
       router.push('/topics/new/review');
@@ -99,6 +102,68 @@ export default function CreateTopicPage() {
               <p className="text-sm text-muted-foreground">
                 Be specific for better results (e.g., &quot;Index Fund Investing&quot; vs &quot;Finance&quot;)
               </p>
+            </div>
+
+            {/* Research Mode Selection */}
+            <div className="space-y-4">
+              <Label>Research Mode</Label>
+              <RadioGroup
+                value={researchMode}
+                onValueChange={(value) => setResearchMode(value as 'strategy_insights' | 'viral_content')}
+                disabled={loading}
+                className="grid gap-4"
+              >
+                {/* Strategy Insights Mode */}
+                <div className="relative">
+                  <RadioGroupItem value="strategy_insights" id="strategy" className="peer sr-only" />
+                  <Label
+                    htmlFor="strategy"
+                    className="flex items-start gap-4 rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer transition-colors"
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                      <Lightbulb className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <div className="font-semibold">Strategy Insights</div>
+                      <p className="text-sm text-muted-foreground">
+                        Extract strategic insights, data points, and production notes for educational content.
+                        Perfect for creating in-depth, value-driven videos.
+                      </p>
+                      <div className="flex gap-2 mt-2">
+                        <Badge variant="outline" className="text-xs">Insights</Badge>
+                        <Badge variant="outline" className="text-xs">Data Points</Badge>
+                        <Badge variant="outline" className="text-xs">Notes</Badge>
+                      </div>
+                    </div>
+                  </Label>
+                </div>
+
+                {/* Viral Content Mode */}
+                <div className="relative">
+                  <RadioGroupItem value="viral_content" id="viral" className="peer sr-only" />
+                  <Label
+                    htmlFor="viral"
+                    className="flex items-start gap-4 rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer transition-colors"
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/30">
+                      <Flame className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <div className="font-semibold">Viral Content Mode <Badge className="ml-2 bg-orange-500">RotLabHQ</Badge></div>
+                      <p className="text-sm text-muted-foreground">
+                        Extract viral content ideas: video prompts, reaction ideas, shocking facts, and trending formats.
+                        Perfect for creating attention-grabbing viral videos.
+                      </p>
+                      <div className="flex gap-2 mt-2">
+                        <Badge variant="outline" className="text-xs">Hooks</Badge>
+                        <Badge variant="outline" className="text-xs">Reactions</Badge>
+                        <Badge variant="outline" className="text-xs">Facts</Badge>
+                        <Badge variant="outline" className="text-xs">Formats</Badge>
+                      </div>
+                    </div>
+                  </Label>
+                </div>
+              </RadioGroup>
             </div>
 
             {/* Video Count Slider */}
